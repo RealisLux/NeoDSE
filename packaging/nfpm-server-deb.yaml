@@ -1,0 +1,48 @@
+# NeoDSE - Debian/Ubuntu server package definition.
+name: neodse-server
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+maintainer: "RealisLux <realislux@users.noreply.github.com>"
+description: NeoDSE controller, WebSocket transport, and explicit proxy
+license: MIT
+depends: [ca-certificates, iproute2, systemd, wireguard-tools]
+deb:
+  # Account-creation tools are needed by preinst before ordinary dependencies.
+  predepends: [passwd]
+contents:
+  - src: build/neodse-server-notices.txt
+    dst: /usr/share/doc/neodse-server/THIRD-PARTY-NOTICES
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: LICENSE
+    dst: /usr/share/doc/neodse-server/copyright
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: NOTICE
+    dst: /usr/share/doc/neodse-server/NOTICE
+    file_info: { mode: 0644, owner: root, group: root }
+  - dst: /etc/neodse
+    type: dir
+    file_info: { mode: 0755, owner: root, group: root }
+  - dst: /var/lib/neodse
+    type: dir
+    file_info: { mode: 0700, owner: neodse-server, group: neodse-server }
+  - src: build/neodse-server
+    dst: /usr/bin/neodse-server
+    file_info: { mode: 0755 }
+  - src: build/neodse-transport
+    dst: /usr/bin/neodse-transport
+    file_info: { mode: 0755 }
+  - src: build/neodse-proxy
+    dst: /usr/bin/neodse-proxy
+    file_info: { mode: 0755 }
+  - src: systemd/neodse-server.service
+    dst: /usr/lib/systemd/system/neodse-server.service
+  - src: systemd/neodse-proxy.service
+    dst: /usr/lib/systemd/system/neodse-proxy.service
+  - src: systemd/neodse-transport.service
+    dst: /usr/lib/systemd/system/neodse-transport.service
+scripts:
+  preinstall: scripts/preinstall-server.sh
+  postinstall: scripts/postinstall-server.sh
+  preremove: scripts/preremove-server.sh
+  postremove: scripts/postremove-server.sh

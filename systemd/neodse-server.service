@@ -1,0 +1,51 @@
+[Unit]
+Description=NeoDSE Control Server
+After=network.target wg-quick@neodse.service neodse-transport.service
+Wants=neodse-transport.service
+
+[Service]
+User=neodse-server
+Group=neodse-server
+StateDirectory=neodse
+StateDirectoryMode=0700
+# Holds the root-only unlock socket while the database is locked.
+RuntimeDirectory=neodse-server
+RuntimeDirectoryMode=0700
+# The unsealed database key lives in memory: keep it out of swap and core dumps.
+MemorySwapMax=0
+LimitCORE=0
+
+ExecStart=/usr/bin/neodse-server --config /etc/neodse/server.yaml
+Restart=always
+RestartSec=15
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+ProtectProc=invisible
+ProcSubset=pid
+KeyringMode=private
+ReadWritePaths=/var/lib/neodse
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

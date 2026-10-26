@@ -1,0 +1,30 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      go-dependencies: { patterns: ['*'] }
+  - package-ecosystem: gomod
+    directory: /tools/analysis
+    schedule: { interval: weekly }
+    groups:
+      analysis-tools: { patterns: ['*'] }
+  - package-ecosystem: gomod
+    directory: /tools/security
+    schedule: { interval: weekly }
+    groups:
+      security-tools: { patterns: ['*'] }
+  - package-ecosystem: gomod
+    directory: /tools/packaging
+    schedule: { interval: weekly }
+    groups:
+      packaging-tools: { patterns: ['*'] }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: gomod
+    directory: /tools/sbom
+    schedule: { interval: weekly }
+    groups:
+      sbom-tools: { patterns: ['*'] }

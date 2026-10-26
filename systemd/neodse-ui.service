@@ -1,0 +1,72 @@
+[Unit]
+Description=NeoDSE UI
+After=neodse-weston.service
+PartOf=neodse-weston.service
+
+[Service]
+User=neodse-ui
+Group=neodse-ipc
+# Keep generated environment data and GTK/WebKit state private from the IPC group.
+RuntimeDirectory=neodse-ui
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+
+ExecCondition=/usr/bin/systemctl is-active --quiet neodse-weston.service
+# Prepare the session without opening another PAM session on Weston's VT.
+ExecStartPre=/usr/lib/neodse/neodse-session-environment
+ExecStart=/usr/bin/neodse-ui
+Restart=always
+RestartSec=15s
+OOMPolicy=stop
+
+# The six-view playlist ceiling requires headroom for WebKit network, GPU,
+# renderer, and media subprocesses while bounding hostile-content growth.
+MemoryHigh=1536M
+MemoryMax=2G
+TasksMax=384
+
+# Compatibility: JavaScriptCore and graphics drivers require executable
+# mappings, and the WebKitGTK subprocess sandbox requires namespaces.
+# MemoryDenyWriteExecute= and RestrictNamespaces= must remain unset.
+# The sandbox also mounts a fresh /proc, which fails while any part of /proc is
+# hidden or overmounted, and its setup fails under the SUID/SGID filter.
+# ProtectHostname=, ProtectKernelTunables=, ProtectKernelLogs=, ProcSubset=
+# and RestrictSUIDSGID= must remain unset.
+# GTK and WebKit render with the GPU through the DRM nodes, which the account
+# opens through its video and render groups. PrivateDevices= would hide them,
+# so the device policy below admits DRM devices and no other hardware.
+
+NoNewPrivileges=true
+PrivateTmp=true
+DevicePolicy=closed
+DeviceAllow=char-drm rw
+InaccessiblePaths=/root /home
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectSystem=strict
+ReadWritePaths=/run/neodse
+# User runtime directories remain protected by their per-user 0700 permissions.
+ReadWritePaths=/run/user
+LockPersonality=true
+ProtectClock=true
+RestrictRealtime=true
+RemoveIPC=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK
+IPAddressDeny=any
+IPAddressAllow=localhost
+ProtectProc=invisible
+KeyringMode=private
+UMask=0077
+
+Environment=XDG_CACHE_HOME=/run/neodse-ui/cache
+Environment=XDG_CONFIG_HOME=/run/neodse-ui/config
+Environment=XDG_DATA_HOME=/run/neodse-ui/data
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_SESSION_TYPE=wayland
+EnvironmentFile=-/etc/neodse/display.env
+# Missing on the first pre-start invocation; generated before ExecStart.
+EnvironmentFile=-/run/neodse-ui/session.env
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,172 @@
+name: Reusable quality gate
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  go-security:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 75
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.3'
+          check-latest: false
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            tools/*/go.sum
+      - name: Verify modules and source
+        run: make verify-go 2>&1 | tee go-verification.log
+      - name: Static and vulnerability analysis
+        run: make verify-security BUILD_DIR="${RUNNER_TEMP}/neodse-build" VERSION=1.0.0-ci 2>&1 | tee security.log
+      - name: Require complete unit test evidence
+        run: |
+          mkdir -p build/tools
+          install -m 0755 "${RUNNER_TEMP}/neodse-build/tools/nfpm" build/tools/nfpm
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libarchive-tools python3
+          make verify-release-tests
+      - name: Fuzz smoke tests
+        run: make fuzz-smoke FUZZ_TIME=15s 2>&1 | tee fuzz.log
+      - name: Exercise 100 displays with the race detector
+        run: make integration INTEGRATION_RACE=true INTEGRATION_DURATION=10m INTEGRATION_TIMEOUT=15m 2>&1 | tee fleet.log
+      - name: Verify production-build fleet resource bounds
+        env:
+          CGO_ENABLED: '0'
+        run: make integration INTEGRATION_RACE=false INTEGRATION_DURATION=10m INTEGRATION_TIMEOUT=15m BUILD_DIR=build/fleet-production 2>&1 | tee fleet-production.log
+      - name: Record security coverage
+        run: |
+          make security-coverage
+          go test ./cmd/... ./internal/... -coverpkg=./internal/... -coverprofile=coverage.out
+          go tool cover -func=coverage.out | tee coverage.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: go-coverage
+          path: |
+            coverage.out
+            coverage.txt
+            fleet.log
+            fleet-production.log
+            go-verification.log
+            security.log
+            fuzz.log
+            build/release-review/unit-tests.jsonl
+            build/fleet-tests.jsonl
+            build/fleet-production/fleet-tests.jsonl
+          retention-days: 90
+
+  go-forward-compatibility:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          check-latest: true
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            tools/*/go.sum
+      - name: Test with current stable Go
+        run: |
+          go vet ./...
+          go test ./...
+          make build vnc-auth-helper VERSION=1.0.0-forward-compat
+
+  native-and-contracts:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.3'
+          check-latest: false
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            tools/*/go.sum
+      - name: Install native validators
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang libclang-rt-dev clang-format-19 clang-tidy cppcheck gcc shellcheck nodejs python3-gi weston iproute2 util-linux libpam-modules openssl pkg-config libarchive-tools libgtk-4-dev libwebkitgtk-6.0-dev libjson-glib-dev
+      - name: Validate contracts and packaging
+        run: make verify-contracts verify-dashboard
+      - name: Test package metadata and SBOM staging
+        if: matrix.compiler == 'gcc'
+        run: |
+          mkdir -p build/tools
+          go -C tools/packaging build -o "${GITHUB_WORKSPACE}/build/tools/nfpm" github.com/goreleaser/nfpm/v2/cmd/nfpm
+          go test -json -count=1 ./internal/quality -run '^(TestRPMStagingExtractsBuiltPackage|TestClientFilesArePackagedAsConfiguration)$' | \
+            python3 scripts/check-test-results.py \
+            --require-test github.com/RealisLux/NeoDSE/internal/quality:TestRPMStagingExtractsBuiltPackage \
+            --require-test github.com/RealisLux/NeoDSE/internal/quality:TestClientFilesArePackagedAsConfiguration
+      - name: Compile and test hardened renderer
+        run: |
+          make verify-native VERSION=1.0.0-ci CC=${{ matrix.compiler }}
+          sudo install -m 0755 \
+            build/neodse-agent build/neodse-proxy build/neodse-server \
+            build/neodse-transport build/neodse-ui /usr/bin/
+          sudo install -D -m 0755 scripts/neodse-weston-config.sh /usr/lib/neodse/neodse-weston-config
+          sudo install -D -m 0755 scripts/neodse-drm-connected.sh /usr/lib/neodse/neodse-drm-connected
+          sudo install -D -m 0755 scripts/neodse-session-environment.sh /usr/lib/neodse/neodse-session-environment
+          systemd-analyze --recursive-errors=yes verify systemd/*.service
+          make verify-native-sanitize CC=${{ matrix.compiler }} BUILD_DIR=build/sanitized
+      - name: Analyze C sources
+        if: matrix.compiler == 'clang'
+        run: |
+          cppcheck --error-exitcode=1 --check-level=exhaustive \
+            --enable=warning,performance,portability \
+            --inline-suppr --library=gtk --library=gnu --library=posix \
+            --suppress=missingIncludeSystem '-DG_GINT64_FORMAT="li"' \
+            ui/*.c
+          read -r -a native_cflags <<< "$(pkg-config --cflags gtk4 webkitgtk-6.0 json-glib-1.0)"
+          clang-tidy \
+            --checks='clang-analyzer-*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling' \
+            --warnings-as-errors='*' ui/*.c -- -std=c17 "${native_cflags[@]}"
+      - name: Headless renderer lifecycle test
+        run: |
+          sudo python3 scripts/check-renderer-lifecycle.py --output build/renderer-lifecycle \
+            build/neodse-ui build/sanitized/neodse-ui-sanitize
+      - name: Stock Weston VNC and PAM integration
+        run: make verify-weston-vnc WESTON_TEST_RUNNER=sudo
+      - name: WireGuard socket confinement
+        run: make verify-wireguard-sockets WIREGUARD_TEST_RUNNER=sudo
+      - name: Dashboard browser acceptance
+        run: make verify-dashboard-browser
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: renderer-lifecycle-${{ matrix.compiler }}
+          path: |
+            build/renderer-lifecycle/
+            build/dashboard-browser/
+            build/dashboard-browser-tests.jsonl
+          retention-days: 90

@@ -1,0 +1,4 @@
+#%PAM-1.0
+# The distribution pam_exec module passes the token on stdin to a fail-closed helper.
+auth    required pam_exec.so quiet expose_authtok /usr/lib/neodse/neodse-vnc-auth
+account required pam_exec.so quiet /usr/lib/neodse/neodse-vnc-auth

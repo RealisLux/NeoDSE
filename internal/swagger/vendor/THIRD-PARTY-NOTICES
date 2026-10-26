@@ -1,0 +1,32 @@
+Supplemental notices for NeoDSE's embedded Swagger UI
+
+These notices supplement the unchanged upstream distribution files.
+Each component retains its own license and copyright notices.
+
+Swagger UI 5.33.3 - upstream NOTICE
+Source: https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.33.3.tgz
+Archive member: package/NOTICE
+NOTICE SHA-256: 0d20d1adef18aee3f40dd258172155521ce702ac445cb5f7b7d60ed32dad2fb2
+
+swagger-ui
+Copyright 2020-2021 SmartBear Software Inc.
+
+ieee754 1.2.1 - BSD-3-Clause
+The Swagger UI 5.33.3 lockfile selects this version, and its bundle source
+map identifies node_modules/ieee754/index.js.
+Source: https://registry.npmjs.org/ieee754/-/ieee754-1.2.1.tgz
+Archive member: package/LICENSE
+Archive integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==
+LICENSE SHA-256: 18d45466ba3253deae04667e267a91ea8de8548f18c1125264d1c9db28194cc1
+
+Copyright 2008 Fair Oaks Labs, Inc.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

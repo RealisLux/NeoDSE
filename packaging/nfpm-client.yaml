@@ -1,0 +1,89 @@
+# NeoDSE - Debian/Ubuntu client package definition.
+name: neodse-client
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+maintainer: "RealisLux <realislux@users.noreply.github.com>"
+description: NeoDSE display agent and GTK/WebKit renderer
+license: MIT
+depends: [ca-certificates, iproute2, systemd, sudo, openssl, weston, dbus-user-session, dbus-bin, libpam-modules, libgtk-4-1, libwebkitgtk-6.0-4, libjson-glib-1.0-0, alsa-utils, wireguard-tools]
+deb:
+  # Account-creation tools are needed by preinst before ordinary dependencies.
+  predepends: [passwd]
+contents:
+  - src: build/neodse-client-notices.txt
+    dst: /usr/share/doc/neodse-client/THIRD-PARTY-NOTICES
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: LICENSE
+    dst: /usr/share/doc/neodse-client/copyright
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: NOTICE
+    dst: /usr/share/doc/neodse-client/NOTICE
+    file_info: { mode: 0644, owner: root, group: root }
+  - dst: /etc/neodse
+    type: dir
+    file_info: { mode: 0755, owner: root, group: root }
+  - src: config/display.env
+    dst: /etc/neodse/display.env
+    type: config
+    file_info: { mode: 0600, owner: root, group: root }
+  - src: build/neodse-agent
+    dst: /usr/bin/neodse-agent
+    file_info: { mode: 0755 }
+  - src: build/neodse-ui
+    dst: /usr/bin/neodse-ui
+    file_info: { mode: 0755 }
+  - src: build/neodse-vnc-auth
+    dst: /usr/lib/neodse/neodse-vnc-auth
+    file_info: { mode: 0755, owner: root, group: root }
+  - src: systemd/neodse-agent.service
+    dst: /usr/lib/systemd/system/neodse-agent.service
+  - src: systemd/neodse-ui.service
+    dst: /usr/lib/systemd/system/neodse-ui.service
+  - src: systemd/neodse-weston.service
+    dst: /usr/lib/systemd/system/neodse-weston.service
+  - src: config/neodse.conf
+    dst: /usr/lib/tmpfiles.d/neodse.conf
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: scripts/neodse-vnc-tls.sh
+    dst: /usr/lib/neodse/neodse-vnc-tls
+    file_info: { mode: 0755, owner: root, group: root }
+  - src: scripts/neodse-weston-config.sh
+    dst: /usr/lib/neodse/neodse-weston-config
+    file_info: { mode: 0755, owner: root, group: root }
+  - src: scripts/neodse-session-environment.sh
+    dst: /usr/lib/neodse/neodse-session-environment
+    file_info: { mode: 0755, owner: root, group: root }
+  - src: scripts/neodse-drm-connected.sh
+    dst: /usr/lib/neodse/neodse-drm-connected
+    file_info: { mode: 0755, owner: root, group: root }
+  - src: udev/71-neodse-display-hotplug.rules
+    dst: /usr/lib/udev/rules.d/71-neodse-display-hotplug.rules
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: pam/weston-remote-access
+    dst: /usr/share/neodse/pam/weston-remote-access
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: sudoers/neodse-agent
+    dst: /etc/sudoers.d/neodse-agent
+    type: config
+    file_info: { mode: 0440 }
+  - src: assets/images/logo-wordmark.png
+    dst: /usr/share/neodse/logo-wordmark.png
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: assets/images/logo-animation-atlas.png
+    dst: /usr/share/neodse/logo-animation-atlas.png
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: assets/sounds/info.wav
+    dst: /usr/share/neodse/info.wav
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: assets/sounds/warning.wav
+    dst: /usr/share/neodse/warning.wav
+    file_info: { mode: 0644, owner: root, group: root }
+  - src: assets/sounds/critical.wav
+    dst: /usr/share/neodse/critical.wav
+    file_info: { mode: 0644, owner: root, group: root }
+scripts:
+  preinstall: scripts/preinstall-agent.sh
+  postinstall: scripts/postinstall-agent.sh
+  preremove: scripts/preremove-agent.sh
+  postremove: scripts/postremove-agent.sh

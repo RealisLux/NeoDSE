@@ -1,0 +1,944 @@
+# NeoDSE - public control API contract. Copyright (c) 2026 RealisLux. SPDX-License-Identifier: MIT.
+openapi: 3.0.3
+info:
+  title: NeoDSE Control Server API
+  version: 1.0.0
+  description: |
+    Manage display content, hardware actions and service accounts through the NeoDSE HTTPS API.
+
+    Select **Authorize** and enter a service-account bearer token. The account's roles
+    determine which operations it can perform, and its agent scope determines which
+    displays it can access. Administrators have access to every operation.
+
+    **Content and actions**
+
+    - Playlist changes are saved even when a display is offline and applied when it reconnects.
+      The display receives only the latest content. When it applies that content, earlier
+      unresolved publications for it become `expired` with reason
+      `superseded by revision N`, and a publication of the same content becomes `accepted`.
+    - Banners, sounds, hardware and host actions require an online, authenticated agent.
+      A single offline target returns `409 agent_offline`; broadcasts record failures per target.
+    - A `202` response means the request was accepted. Use its `event_id` with
+      `GET /api/v1/events/{eventId}` to check results. An `uncertain` delivery may have
+      executed and is never automatically retried. A command that reaches its display after
+      its expiry is not executed; the display reports it as `expired`.
+
+    **Request format**
+
+    Send JSON bodies as `application/json`, up to 1 MiB. Invalid content types return
+    `415`; oversized bodies return `413`. Authenticated requests may return `503`
+    when authentication or required storage is unavailable.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Server states
+    description: Process health, authenticated session identity and controller readiness.
+  - name: Events
+    description: Delivery results and agent receipts for accepted operations.
+  - name: Service accounts
+    description: Administrator-only account, role, agent-scope and token management.
+  - name: Scheduler
+    description: Weekly screen-power schedules; changes require administrator access.
+  - name: Agent
+    description: Status, desired content and actions for an individual display agent. Access is limited by account roles and agent scope.
+  - name: Agent broadcast
+    description: Content changes and actions across the agents in the account's scope. Results are reported per target.
+paths:
+  /healthz:
+    get:
+      tags: [Server states]
+      summary: Get server health
+      description: >-
+        Reports process liveness without authentication. Use `GET /api/v1/system/status` to
+        check database and transport readiness.
+      security: []
+      responses:
+        '200':
+          description: Process liveness only
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, example: ok }
+  /api/v1/session:
+    get:
+      tags: [Server states]
+      summary: Get the authenticated token identity and roles
+      description: >-
+        Returns the identity and assigned roles of the service account associated with the
+        bearer token. Available to every authenticated role.
+      responses:
+        '200':
+          description: Current service-account identity and assigned roles
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionIdentity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/agents:
+    get:
+      tags: [Agent]
+      summary: List visible agents
+      description: >-
+        Lists provisioned agents within the account's scope, including their last reported
+        status and authentication state. Available to every authenticated role; it does not
+        contact each agent on demand.
+      responses:
+        '200':
+          description: Agents visible to the bearer token
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AgentState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/agents/{agentId}:
+    get:
+      tags: [Agent]
+      summary: Get an agent
+      description: >-
+        Returns the selected agent's last reported status and authentication state. Available to
+        every authenticated role within its agent scope. Use `last_seen` to assess freshness.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      responses:
+        '200':
+          description: Current agent state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/agents/{agentId}/state:
+    get:
+      tags: [Agent]
+      summary: Get the controller-authoritative desired display state
+      description: >-
+        Returns the desired content, generation and revision stored by the controller. Available
+        to every authenticated role within its agent scope. This describes the configured state;
+        use the live display stream to inspect the current output.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      responses:
+        '200': { description: Complete desired state, content: { application/json: { schema: { $ref: '#/components/schemas/DesiredState' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/agents/{agentId}/{operation}:
+    post:
+      tags: [Agent]
+      summary: Run a system operation on an agent
+      description: >-
+        Runs a host or renderer action on the selected agent. Requires `system_operator` and an
+        online, authenticated agent within the account's scope. `restart` restarts the GTK UI
+        service while the agent remains connected; `reboot` and `shutdown` affect the Linux
+        host.
+      parameters:
+        - { $ref: '#/components/parameters/AgentID' }
+        - name: operation
+          in: path
+          required: true
+          schema: { type: string, enum: [restart, reboot, shutdown] }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/AgentOffline' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/{agentId}/playlist:
+    put:
+      tags: [Agent]
+      summary: Replace the active playlist
+      description: >-
+        Replaces the selected agent's playlist and content-origin permissions. Requires
+        `content_manager` within the account's agent scope. The controller saves the desired
+        content even when the agent is offline and applies it after reconnect or restart.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlaylistRequest' }
+      responses:
+        '202': { $ref: '#/components/responses/QueuedEvent' }
+        '400': { description: Invalid playlist, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/RequestTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    delete:
+      tags: [Agent]
+      summary: Clear the playlist and restore the waiting screen
+      description: >-
+        Clears the selected agent's playlist and restores the waiting screen. Requires
+        `content_manager` within the account's agent scope. The controller saves this state even
+        when the agent is offline and applies it after reconnect.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/{agentId}/playlist/reload:
+    post:
+      tags: [Agent]
+      summary: Reload the active playlist pages
+      description: >-
+        Reloads every active playlist page, including hidden pages, bypassing cached data in
+        its existing WebKit view without rebuilding the playlist or changing playback timing.
+        Requires `content_manager` and an online, authenticated agent within the account's
+        scope.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      responses:
+        '202': { $ref: '#/components/responses/QueuedEvent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/AgentOffline' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/agents/{agentId}/playlist/sync:
+    post:
+      tags: [Agent]
+      summary: Synchronize the active playlist clock
+      description: >-
+        Updates the selected agent's playlist timing using a start time in the controller's
+        local timezone. Requires `content_manager` within the account's agent scope and an
+        existing saved playlist. Timing changes are saved for offline agents and applied after
+        reconnect.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SyncRequest' }
+      responses:
+        '202': { $ref: '#/components/responses/QueuedEvent' }
+        '400': { description: Invalid synchronization timestamp, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Agent has no authoritative playlist, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+        '413': { $ref: '#/components/responses/RequestTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/agents/{agentId}/proxy/revoke:
+    post:
+      tags: [Agent]
+      summary: Revoke proxy access for an agent
+      description: >-
+        Revokes the selected agent's content-proxy permissions. Requires `content_manager`
+        within the account's agent scope. New authorizations are denied after the change is
+        saved; active streams and tunnels close within 60 seconds. Returns `204` if no policy
+        exists. Revocation survives playback synchronization, reload and reconnect;
+        publishing a playlist explicitly authorizes its destinations again.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      responses: { '202': { description: Proxy policy deletion accepted }, '204': { description: Agent already has no proxy policy }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { description: Agent not found, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '500': { description: Proxy policy revocation could not be persisted, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/{agentId}/display/status:
+    get:
+      tags: [Agent]
+      summary: Retrieve the latest HDMI-CEC display status
+      description: >-
+        Returns the latest HDMI-CEC configuration and power observation reported by the selected
+        agent. Available to every authenticated role within its agent scope. This does not issue
+        a new hardware query; use `checked_at` to assess freshness.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      responses:
+        '200':
+          description: Latest CEC configuration and agent-reported power state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CECStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /api/v1/agents/{agentId}/display/stream:
+    get:
+      tags: [Agent]
+      summary: Stream the agent's read-only live display
+      description: |
+        Opens a read-only live view of the selected display. Available to every authenticated
+        role within its agent scope. Only one viewer per agent is admitted; close or cancel
+        the response to release the viewer slot. Request bodies are rejected.
+
+        **Frame format:** a four-byte unsigned big-endian JPEG byte length followed by
+        that many JPEG bytes (1 to 2097152). HTTP chunk boundaries do not delimit frames.
+
+        The originating API account and agent credential are revalidated during streaming.
+        Startup failures return JSON errors; capture failure or revocation after HTTP `200`
+        ends the stream. Reverse proxies must disable buffering and allow idle streams.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      responses:
+        '200':
+          description: Continuous length-prefixed JPEG frames
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '400': { description: Request body is not allowed, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Agent offline, session changed, or another viewer is active', content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+        '500': { description: Could not create or flush an HTTP display stream, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+        '503': { description: Agent could not start display capture, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+        '504': { description: Display capture startup timed out, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+  /api/v1/agents/{agentId}/display/volume:
+    post:
+      tags: [Agent]
+      summary: Set the absolute HDMI-CEC audio volume
+      description: >-
+        Sets the selected display's audio volume using the optional CEC 2.0 Set Audio Volume
+        Level command. Requires `cec_manager` and an online, authenticated agent within the
+        account's scope. HDMI-CEC must be enabled and the audio target must support the command.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DisplayVolumeRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid volume level, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/AgentOffline' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/{agentId}/display/{operation}:
+    post:
+      tags: [Agent]
+      summary: Execute an HDMI-CEC display operation
+      description: >-
+        Controls screen power, active source, mute or relative volume through HDMI-CEC. Requires
+        `cec_manager` and an online, authenticated agent within the account's scope. Hardware
+        support varies; screen power operations do not boot or shut down the Linux host.
+      parameters:
+        - { $ref: '#/components/parameters/AgentID' }
+        - name: operation
+          in: path
+          required: true
+          schema: { type: string, enum: [on, off, active, mute, volup, voldown] }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/AgentOffline' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/{agentId}/sound/{profile}:
+    post:
+      tags: [Agent]
+      summary: Play a notification sound
+      description: >-
+        Plays the local audio file configured for the `info`, `warning` or `critical` profile on
+        the selected agent. Requires `alert_io_operator` and an online, authenticated agent
+        within the account's scope. Playback uses the agent's configured host audio output.
+      parameters:
+        - { $ref: '#/components/parameters/AgentID' }
+        - name: profile
+          in: path
+          required: true
+          schema: { type: string, enum: [info, warning, critical], description: Selects a local audio file configured on the agent }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/AgentOffline' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/{agentId}/serial:
+    post:
+      tags: [Agent]
+      summary: Send a structured serial peripheral action
+      description: >-
+        Sends a validated beacon, buzzer, relay or query action to the selected agent's serial
+        peripheral. Requires `alert_io_operator` and an online, authenticated agent within the
+        account's scope. Serial access must be enabled and the device must implement NeoDSE's AT
+        command protocol; arbitrary serial bytes are unsupported.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SerialRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid serial action, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/AgentOffline' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/{agentId}/banner:
+    post:
+      tags: [Agent]
+      summary: Display a transient message banner
+      description: >-
+        Displays a temporary `info`, `warning` or `critical` banner for 1–300 seconds. Requires
+        `content_manager` and an online, authenticated agent within the account's scope. A new
+        custom banner replaces the previous one; connection-failure warnings retain visual
+        priority.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BannerRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid banner, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/AgentOffline' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/broadcast/{operation}:
+    post:
+      tags: [Agent broadcast]
+      summary: Run a system operation on all agents
+      description: >-
+        Runs host or renderer actions across agents in the account's scope. Requires
+        `system_operator`. `restart` restarts each GTK UI service; `reboot` and `shutdown`
+        affect each Linux host.
+      parameters:
+        - name: operation
+          in: path
+          required: true
+          schema: { type: string, enum: [restart, reboot, shutdown] }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/playlist:
+    put:
+      tags: [Agent broadcast]
+      summary: Replace the playlist on all agents
+      description: >-
+        Replaces playlists and content-origin permissions across agents in the account's scope.
+        Requires `content_manager`. Changes are saved for offline agents and applied after
+        reconnect.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlaylistRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid playlist or proxy allow URL, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+    delete:
+      tags: [Agent broadcast]
+      summary: Stop the playlist on all agents
+      description: >-
+        Clears playlists and restores the waiting screen across agents in the account's scope.
+        Requires `content_manager`. The default state is saved for offline agents and applied
+        after reconnect.
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/playlist/reload:
+    post:
+      tags: [Agent broadcast]
+      summary: Reload playlist pages on all agents
+      description: >-
+        Reloads documents in their existing WebKit views across agents in the account's scope.
+        Requires `content_manager`. Offline targets are rejected in the event outcomes.
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/playlist/sync:
+    post:
+      tags: [Agent broadcast]
+      summary: Synchronize the playlist clock on all agents
+      description: >-
+        Updates saved playlist timing using a start time in the controller's local timezone
+        across agents in the account's scope. Requires `content_manager`. Each target must have
+        a saved playlist; timing changes are retained for offline agents.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SyncRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid synchronization timestamp, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/display/volume:
+    post:
+      tags: [Agent broadcast]
+      summary: Set the absolute HDMI-CEC audio volume on all agents
+      description: >-
+        Sets audio volume using the optional CEC 2.0 Set Audio Volume Level command across
+        agents in the account's scope. Requires `cec_manager`. Device support varies. Offline
+        targets are rejected in the event outcomes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DisplayVolumeRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid volume level, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/display/{operation}:
+    post:
+      tags: [Agent broadcast]
+      summary: Execute an HDMI-CEC display operation on all agents
+      description: >-
+        Controls screen power, active source, mute or relative volume through HDMI-CEC across
+        agents in the account's scope. Requires `cec_manager`. Hardware support varies. Offline
+        targets are rejected in the event outcomes.
+      parameters:
+        - name: operation
+          in: path
+          required: true
+          schema: { type: string, enum: [on, off, active, mute, volup, voldown] }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/sound/{profile}:
+    post:
+      tags: [Agent broadcast]
+      summary: Play a notification sound on all agents
+      description: >-
+        Plays each agent's local audio file for the selected notification profile across agents
+        in the account's scope. Requires `alert_io_operator`. Offline targets are rejected in
+        the event outcomes.
+      parameters:
+        - name: profile
+          in: path
+          required: true
+          schema: { type: string, enum: [info, warning, critical], description: Selects a local audio file configured on the agent }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/serial:
+    post:
+      tags: [Agent broadcast]
+      summary: Send a structured serial peripheral action to all agents
+      description: >-
+        Sends a structured action to each agent's enabled serial peripheral across agents in the
+        account's scope. Requires `alert_io_operator`. Devices must implement NeoDSE's AT
+        command protocol. Offline targets are rejected in the event outcomes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SerialRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid serial action, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/banner:
+    post:
+      tags: [Agent broadcast]
+      summary: Display a transient message banner on all agents
+      description: >-
+        Displays a temporary notification banner across agents in the account's scope. Requires
+        `content_manager`. A new custom banner replaces the previous one; connection-failure
+        warnings retain visual priority. Offline targets are rejected in the event outcomes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BannerRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid banner, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/events/{eventId}:
+    get:
+      tags: [Events]
+      summary: Get durable event state
+      description: >-
+        Returns stored delivery outcomes and authenticated receipts for an accepted operation or
+        scheduled occurrence. Available to every authenticated role, provided its agent scope
+        includes every target in the event. Use the exact returned `event_id` or an agent's
+        `last_event_id`.
+      parameters: [ { $ref: '#/components/parameters/EventID' } ]
+      responses:
+        '200':
+          description: Event state and authenticated agent receipts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EventState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/agents/{agentId}/schedules:
+    parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+    get:
+      tags: [Scheduler]
+      summary: Get an agent's optional weekly display-power schedule
+      description: >-
+        Returns the selected agent's optional weekly screen-power schedule. Available to
+        every authenticated role within its agent scope. An agent has at most one schedule.
+      responses:
+        '200':
+          description: Zero or one configured schedule
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Schedule' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    post:
+      tags: [Scheduler]
+      summary: Create or replace an agent's weekly power schedule
+      description: >-
+        Creates or replaces the selected agent's weekly HDMI-CEC screen-power schedule.
+        Requires `administrator`. The agent ID identifies the schedule, and times use the
+        controller's local timezone. Scheduled screen actions require a running Linux host.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Schedule' }
+      responses: { '200': { description: Schedule created or replaced, content: { application/json: { schema: { $ref: '#/components/schemas/Schedule' } } } }, '400': { description: Invalid schedule, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '413': { $ref: '#/components/responses/RequestTooLarge' }, '415': { $ref: '#/components/responses/UnsupportedMediaType' }, '500': { description: Schedule could not be persisted, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+    delete:
+      tags: [Scheduler]
+      summary: Delete an agent's weekly power schedule
+      description: >-
+        Removes the selected agent's weekly screen-power schedule. Requires `administrator`.
+        This does not change the screen's current power state.
+      responses: { '204': { description: Deleted }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/service-accounts:
+    get:
+      tags: [Service accounts]
+      summary: List service accounts
+      description: >-
+        Lists service accounts with their metadata, roles and agent scopes. Requires
+        `administrator`. Plaintext tokens and token hashes are never returned.
+      responses:
+        '200':
+          description: Configured service accounts
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ServiceAccount' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Service accounts]
+      summary: Create a service account
+      description: >-
+        Creates a service account with the supplied roles, agent scope and optional expiry.
+        Requires `administrator`. The bearer token is returned once; store it securely
+        before closing the response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ServiceAccountInput' }
+      responses:
+        '201':
+          description: Service account and one-time token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service_account: { $ref: '#/components/schemas/ServiceAccount' }
+                  token: { type: string, readOnly: true, description: One-time bearer token; store securely }
+        '400': { description: Invalid service account, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Service account name already exists, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+  /api/v1/service-accounts/{accountId}:
+    parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Service accounts]
+      summary: Get a service account
+      description: >-
+        Returns the account's metadata, roles, agent assignments, expiry and enabled state.
+        Requires `administrator`. Plaintext tokens and token hashes are never returned.
+      responses: { '200': { description: Service account, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceAccount' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } }
+    put:
+      tags: [Service accounts]
+      summary: Replace service-account metadata, roles, and agent scope
+      description: >-
+        Replaces the account's metadata, roles, agent scope, expiry and disabled state. Requires
+        `administrator`. Changes apply to subsequent authorization checks; the caller cannot
+        disable itself or remove its own administrator access. Omitted optional fields reset
+        to their defaults; they do not retain the account's previous values.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ServiceAccountInput' } } }
+      responses: { '200': { description: Updated service account, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceAccount' } } } }, '400': { description: Invalid service account, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Service account name already exists or active administrator would lose access, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '413': { $ref: '#/components/responses/RequestTooLarge' }, '415': { $ref: '#/components/responses/UnsupportedMediaType' }, '500': { description: Service account could not be updated, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+    delete:
+      tags: [Service accounts]
+      summary: Delete a service account and revoke its token
+      description: >-
+        Deletes the account and revokes its bearer token. Requires `administrator`. The calling
+        administrator cannot delete its own account.
+      responses: { '204': { description: Deleted }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Active administrator cannot delete itself, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } } }
+  /api/v1/service-accounts/{accountId}/rotate-token:
+    parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Service accounts]
+      summary: Replace the account's token
+      description: >-
+        Replaces the account's bearer token and invalidates the previous value immediately.
+        Requires `administrator`. The new token is returned once; store it securely before
+        closing the response.
+      responses:
+        '200':
+          description: One-time replacement token
+          content: { application/json: { schema: { type: object, properties: { token: { type: string, readOnly: true, description: One-time bearer token; store securely } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/system/status:
+    get:
+      tags: [Server states]
+      summary: Get authenticated database and transport readiness
+      description: >-
+        Reports database availability and the controller's transport connection. Available to
+        every authenticated role. HTTP `200` can report `degraded`; readiness requires `status:
+        ready`, `database: true` and `transport: true`.
+      responses:
+        '200': { description: Component readiness, content: { application/json: { schema: { type: object } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API token
+  parameters:
+    AgentID:
+      name: agentId
+      in: path
+      required: true
+      description: Canonical agent identifier; the exact lowercase value broadcast is reserved for fleet routes.
+      schema: { type: string, minLength: 1, maxLength: 32, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$', not: { enum: [broadcast] } }
+      example: display-001
+    EventID:
+      name: eventId
+      in: path
+      required: true
+      description: Opaque identifier returned by an operation or agent status, including scheduled events.
+      schema: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9_.:-]+$' }
+      example: evt-801f654b2b769aa59b2b1387d62688b3
+  responses:
+    QueuedEvent:
+      description: Operation accepted and committed with its target set; this does not confirm execution. Query the returned event_id for delivery results. Transient commands reject offline targets. Claimed attempts are uncertain until an authenticated receipt resolves them and are never automatically replayed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/QueuedEvent' }
+    AgentOffline:
+      description: The target has no live authenticated session; no online-only action was queued
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/APIError' }
+          example: { code: agent_offline, message: agent offline, request_id: example-request }
+    Unauthorized: { description: Missing or invalid bearer token, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+    Forbidden: { description: Service account role or agent scope does not authorize the operation, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+    NotFound: { description: Resource is unavailable or expired, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+    ServiceUnavailable: { description: Required storage is temporarily unavailable, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+    UnsupportedMediaType: { description: Request body must use application/json, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+    RequestTooLarge: { description: Request body exceeds the 1 MiB limit, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }
+  schemas:
+    CanonicalTimestamp:
+      type: string
+      format: date-time
+      pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+      example: '2026-08-31T18:05:42Z'
+      description: Whole-second UTC timestamp
+    NullableCanonicalTimestamp:
+      type: string
+      format: date-time
+      nullable: true
+      pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+      example: '2026-08-31T18:05:42Z'
+      description: Whole-second UTC timestamp when present
+    AgentReportedTimestamp:
+      description: Whole-second UTC timestamp, or an empty string before the agent has reported it
+      oneOf:
+        - $ref: '#/components/schemas/CanonicalTimestamp'
+        - { type: string, enum: [''] }
+    SessionIdentity:
+      type: object
+      required: [service_account_id, roles]
+      properties:
+        service_account_id: { type: string }
+        roles:
+          type: array
+          items: { type: string, enum: [viewer, content_manager, alert_io_operator, cec_manager, system_operator, administrator] }
+    APIError:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        request_id: { type: string }
+    ServiceAccountInput:
+      type: object
+      additionalProperties: false
+      required: [name, roles]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 128, pattern: '^[^\u0000]+$', description: Trimmed UTF-8 name of 1-128 bytes without NUL }
+        description: { type: string, maxLength: 1024 }
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 6
+          uniqueItems: true
+          description: viewer reads state and schedules; content_manager controls displayed content; alert_io_operator controls notification sounds and serial; cec_manager controls HDMI-CEC power and audio; system_operator controls host lifecycle; administrator has all access and exclusively manages schedule changes and service accounts.
+          items: { type: string, enum: [viewer, content_manager, alert_io_operator, cec_manager, system_operator, administrator] }
+        all_agents: { type: boolean, default: false }
+        agents:
+          type: array
+          maxItems: 256
+          uniqueItems: true
+          default: []
+          items: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$', not: { enum: [broadcast] } }
+        expires_at: { type: string, format: date-time, nullable: true }
+        disabled: { type: boolean, default: false }
+    ServiceAccount:
+      type: object
+      additionalProperties: false
+      required: [id, name, roles, all_agents, agents, disabled, created_at, updated_at]
+      properties:
+        id: { type: string, readOnly: true }
+        name: { type: string, minLength: 1, maxLength: 128 }
+        description: { type: string, maxLength: 1024 }
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 6
+          uniqueItems: true
+          items: { type: string, enum: [viewer, content_manager, alert_io_operator, cec_manager, system_operator, administrator] }
+        all_agents: { type: boolean }
+        agents:
+          type: array
+          maxItems: 256
+          uniqueItems: true
+          items: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$', not: { enum: [broadcast] } }
+        expires_at: { $ref: '#/components/schemas/NullableCanonicalTimestamp' }
+        disabled: { type: boolean }
+        created_at: { $ref: '#/components/schemas/CanonicalTimestamp' }
+        updated_at: { $ref: '#/components/schemas/CanonicalTimestamp' }
+        last_used_at: { $ref: '#/components/schemas/NullableCanonicalTimestamp' }
+    Schedule:
+      type: object
+      additionalProperties: false
+      required: [days, power_on, power_off, enabled, reminder_enabled]
+      properties:
+        days:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday] }
+        power_on: { type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', example: '08:00' }
+        power_off: { type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', example: '18:00' }
+        enabled: { type: boolean }
+        reminder_enabled: { type: boolean, description: Show minute-by-minute warning banners during the five minutes before power-off. }
+        last_on_occurrence: { type: string, readOnly: true }
+        last_off_occurrence: { type: string, readOnly: true }
+    AgentState:
+      type: object
+      properties:
+        protocol: { type: integer, example: 1, description: Agent protocol version; the controller's supported version before the first status report }
+        agent_id: { type: string }
+        friendly_name: { type: string, maxLength: 32, description: Optional operator-configured display label }
+        hostname: { type: string }
+        version: { type: string }
+        status: { type: string, example: online }
+        started_at: { $ref: '#/components/schemas/AgentReportedTimestamp' }
+        uptime_seconds: { type: integer, format: uint64 }
+        last_event_id: { type: string }
+        last_seen: { $ref: '#/components/schemas/CanonicalTimestamp' }
+        is_authenticated: { type: boolean }
+        timestamp:
+          allOf: [ { $ref: '#/components/schemas/AgentReportedTimestamp' } ]
+          description: Timestamp of the last authenticated status message
+    QueuedEvent:
+      type: object
+      required: [event_id, status]
+      properties:
+        event_id: { type: string, pattern: '^evt-[0-9a-f]{32}$' }
+        status: { type: string, enum: [queued] }
+    DesiredState:
+      type: object
+      additionalProperties: false
+      required: [agent_id, generation, revision, updated_at, content]
+      properties:
+        agent_id: { type: string }
+        generation: { type: string }
+        revision: { type: integer, format: uint64, minimum: 1 }
+        updated_at: { $ref: '#/components/schemas/CanonicalTimestamp' }
+        content: { $ref: '#/components/schemas/ContentState' }
+    ContentState:
+      oneOf:
+        - $ref: '#/components/schemas/DefaultContentState'
+        - $ref: '#/components/schemas/PlaylistContentState'
+      discriminator:
+        propertyName: mode
+        mapping:
+          default: '#/components/schemas/DefaultContentState'
+          playlist: '#/components/schemas/PlaylistContentState'
+    DefaultContentState:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode: { type: string, enum: [default] }
+    PlaylistContentState:
+      type: object
+      additionalProperties: false
+      required: [mode, urls]
+      properties:
+        mode: { type: string, enum: [playlist] }
+        urls:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items: { type: string, format: uri, pattern: '^https?://' }
+        proxy_allow:
+          type: array
+          maxItems: 128
+          description: Additional resource origins; playlist URL origins are always authorized automatically
+          items: { type: string, format: uri, pattern: '^https?://' }
+        interval: { type: integer, minimum: 0, maximum: 86400, example: 30, description: 'Seconds each page stays visible, 10-86400; absent for a single page' }
+        start_at: { type: integer, format: int64, minimum: 0, maximum: 4102444800, example: 0 }
+    PlaylistRequest:
+      type: object
+      additionalProperties: false
+      required: [urls]
+      example: { urls: ['https://signage.example/a', 'https://signage.example/b'], interval: 30 }
+      properties:
+        urls:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items: { type: string, format: uri, pattern: '^https?://' }
+        proxy_allow:
+          type: array
+          maxItems: 128
+          description: Additional resource origins; playlist URL origins are always authorized automatically
+          items: { type: string, format: uri, pattern: '^https?://' }
+        interval: { type: integer, minimum: 0, maximum: 86400, example: 30, description: 'Seconds each page stays visible. Required, 10-86400, when the playlist has several URLs; omit it for a single URL, which stays displayed' }
+        start_at: { type: integer, format: int64, minimum: 0, maximum: 4102444800, example: 0, description: Omit or use 0 to start immediately; otherwise use a Unix timestamp through 2100 }
+    SyncRequest:
+      type: object
+      additionalProperties: false
+      required: [start_at]
+      properties:
+        start_at: { type: string, pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$', example: '2026-09-21T15:00', description: 'Controller-local date and time in YYYY-MM-DDTHH:mm form, without a timezone offset; interpreted using the controller timezone. Nonexistent daylight-saving minutes are rejected; repeated minutes use the timezone library selection.' }
+    DisplayVolumeRequest:
+      type: object
+      additionalProperties: false
+      required: [level]
+      properties:
+        level: { type: integer, minimum: 0, maximum: 100, example: 50 }
+    SerialRequest:
+      description: Structured action for a peripheral implementing the NeoDSE AT command protocol; arbitrary serial bytes are unsupported
+      type: object
+      additionalProperties: false
+      required: [command]
+      properties:
+        command: { type: string, enum: [beacon, buzzer, relay, info, status] }
+        state: { type: string, enum: [on, off, blink], description: 'Required for beacon, buzzer and relay; blink is beacon-only' }
+        period_ms: { type: integer, minimum: 100, maximum: 60000, description: Required only for beacon blink }
+        relay_id: { type: integer, minimum: 1, maximum: 32, description: Required only for relay }
+    BannerRequest:
+      type: object
+      additionalProperties: false
+      required: [message, severity, duration_seconds]
+      properties:
+        message: { type: string, minLength: 1, maxLength: 256, description: Must contain 1-256 Unicode characters and must not be whitespace-only }
+        severity: { type: string, enum: [info, warning, critical] }
+        duration_seconds: { type: integer, minimum: 1, maximum: 300 }
+    EventState:
+      type: object
+      properties:
+        event_id: { type: string }
+        targets: { type: array, items: { type: string }, description: Concrete agent target snapshot }
+        created_at: { $ref: '#/components/schemas/CanonicalTimestamp' }
+        updated_at: { $ref: '#/components/schemas/CanonicalTimestamp' }
+        receipts:
+          type: array
+          description: First authenticated receipt for each target and lifecycle status; at most six receipts per target. Repeated statuses preserve the first diagnostic.
+          items: { $ref: '#/components/schemas/CommandReceipt' }
+        deliveries:
+          type: array
+          description: Durable per-target outcomes, including offline rejection, uncertain attempts and playlist publications resolved by later content
+          items: { $ref: '#/components/schemas/DeliveryOutcome' }
+    DeliveryOutcome:
+      type: object
+      additionalProperties: false
+      required: [agent_id, status]
+      properties:
+        agent_id: { type: string }
+        status: { type: string, enum: [queued, uncertain, received, accepted, completed, failed, expired, unsupported, rejected] }
+        reason: { type: string, maxLength: 128 }
+    CommandReceipt:
+      type: object
+      additionalProperties: false
+      required: [agent_id, status, operation, timestamp]
+      properties:
+        agent_id: { type: string }
+        status: { type: string, enum: [received, accepted, completed, failed, expired, unsupported] }
+        operation: { type: string, enum: [desired_state, display, display_volume, sound, serial, banner, reload, restart, reboot, shutdown] }
+        error: { type: string, maxLength: 1024 }
+        details: { type: string, maxLength: 768, description: 'Bounded command diagnostics, including Linux CEC adapter details for CEC commands' }
+        value: { type: string, maxLength: 32, description: Normalized command result; display power commands return the resulting power state }
+        timestamp: { $ref: '#/components/schemas/CanonicalTimestamp' }
+    CECStatus:
+      type: object
+      required: [agent_id, enabled, power_status, output, checked_at]
+      properties:
+        agent_id: { type: string }
+        enabled: { type: boolean }
+        power_status: { type: string, enum: [on, standby, transitioning, unknown] }
+        output: { type: string, maxLength: 768 }
+        checked_at: { type: string, description: Empty when no probe has completed }

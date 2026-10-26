@@ -1,0 +1,42 @@
+[Unit]
+Description=NeoDSE Control Agent
+After=network.target wg-quick@neodse.service systemd-tmpfiles-setup.service
+ConditionPathExists=/etc/neodse/agent.yaml
+
+[Service]
+User=neodse-agent
+Group=neodse-agent
+SupplementaryGroups=neodse-ipc video
+
+ExecStart=/usr/bin/neodse-agent --config /etc/neodse/agent.yaml
+Restart=always
+RestartSec=15
+
+# Fixed host power and UI restart commands use sudo; NoNewPrivileges= must
+# remain unset. Hardware control also requires access to host devices.
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK
+LockPersonality=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+ProtectProc=invisible
+ProcSubset=pid
+KeyringMode=private
+ReadWritePaths=/run/neodse-vnc-auth
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,44 @@
+[Unit]
+Description=NeoDSE WebSocket transport
+# The listener binds to the WireGuard interface, so start after the tunnel.
+After=network-online.target wg-quick@neodse.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=neodse-transport
+Group=neodse-transport
+
+ExecStart=/usr/bin/neodse-transport --config /etc/neodse/transport.yaml
+Restart=on-failure
+RestartSec=5s
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+RestrictAddressFamilies=AF_INET AF_NETLINK
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+ProtectProc=invisible
+ProcSubset=pid
+KeyringMode=private
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+/usr/bin/neodse-server	--	gen_context(system_u:object_r:neodse_server_exec_t,s0)
+/usr/bin/neodse-transport	--	gen_context(system_u:object_r:neodse_transport_exec_t,s0)
+/usr/bin/neodse-proxy	--	gen_context(system_u:object_r:neodse_proxy_exec_t,s0)
+/etc/neodse(/.*)?		gen_context(system_u:object_r:neodse_etc_t,s0)
+/var/lib/neodse(/.*)?	gen_context(system_u:object_r:neodse_server_var_lib_t,s0)
+/run/neodse-server(/.*)?	gen_context(system_u:object_r:neodse_server_runtime_t,s0)

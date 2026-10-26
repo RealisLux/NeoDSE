@@ -1,0 +1,83 @@
+[Unit]
+Description=NeoDSE Weston compositor
+After=systemd-user-sessions.service
+Wants=neodse-ui.service
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=neodse-ui
+Group=neodse-ipc
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+
+RuntimeDirectory=neodse
+# The agent may connect to IPC sockets, but must not replace the compositor
+# configuration or directory entries owned by the display account.
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+
+LoadCredential=vnc.key:/var/lib/neodse-vnc/server.key
+
+ExecCondition=/usr/lib/neodse/neodse-drm-connected
+ExecStartPre=/usr/lib/neodse/neodse-weston-config
+# PAM supplies the private /run/user/<uid> runtime directory for Wayland.
+ExecStart=/usr/bin/weston \
+  --backend=drm,vnc \
+  --shell=kiosk-shell.so \
+  --idle-time=0 \
+  --address=127.0.0.1 \
+  --port=5900 \
+  --vnc-tls-key=%d/vnc.key \
+  --vnc-tls-cert=/var/lib/neodse-vnc/server.crt \
+  --modules=systemd-notify.so \
+  --config=/run/neodse/weston.ini \
+  --socket=wayland-0
+Restart=on-failure
+RestartSec=15s
+OOMPolicy=stop
+LimitCORE=0
+
+# Weston has no content-process fan-out; this allowance covers DRM buffers,
+# compositor threads, and reviewed graphics-driver overhead.
+MemoryHigh=256M
+MemoryMax=384M
+TasksMax=128
+
+# Compatibility: graphics-driver shader compilation may require executable
+# mappings, so MemoryDenyWriteExecute= must remain unset.
+
+PrivateTmp=true
+NoNewPrivileges=true
+InaccessiblePaths=/root /home
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectSystem=strict
+# User runtime directories remain protected by their per-user 0700 permissions.
+ReadWritePaths=/run/user
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK
+RestrictSUIDSGID=true
+RemoveIPC=true
+LockPersonality=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+ProtectProc=invisible
+ProcSubset=pid
+SystemCallArchitectures=native
+KeyringMode=private
+UMask=0077
+
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_SESSION_CLASS=user
+Environment=XDG_SESSION_TYPE=wayland
+EnvironmentFile=-/etc/neodse/display.env
+
+[Install]
+WantedBy=multi-user.target

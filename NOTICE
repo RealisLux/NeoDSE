@@ -1,0 +1,46 @@
+NeoDSE - Digital Signage Engine
+
+Copyright (c) 2026 RealisLux
+
+Project: https://github.com/RealisLux/NeoDSE
+
+License and scope of this notice
+-------------------------------
+NeoDSE's original code, documentation and assets are licensed under the MIT
+License supplied in LICENSE. That file contains the permission conditions,
+warranty disclaimer and liability exclusion. Those exclusions apply only to
+the extent permitted by applicable law.
+
+This NOTICE provides attribution and operational information. It does not
+replace or modify LICENSE or any third-party license, and it imposes no
+additional license conditions or restrictions on use.
+
+Intended use
+------------
+NeoDSE manages operational information displays and notifications. It has not
+been qualified as a safety-critical alarm or protective-control system.
+Acceptance of an API request does not confirm execution on connected equipment.
+Administrators are responsible for assessing suitability, securing and
+maintaining their deployment, and validating connected displays and peripherals.
+
+Third-party components
+----------------------
+Third-party components retain their own licenses and copyright notices.
+NeoDSE's MIT License does not replace those terms.
+
+For embedded Swagger UI and its bundled components, source distributions include:
+  - internal/swagger/vendor/LICENSE
+  - internal/swagger/vendor/swagger-ui-bundle.js.LICENSE.txt
+  - internal/swagger/vendor/THIRD-PARTY-NOTICES
+
+Each binary package includes a component-specific THIRD-PARTY-NOTICES file
+covering its linked Go dependencies and embedded assets. DEB packages install
+NOTICE, THIRD-PARTY-NOTICES and the project's MIT License (named copyright) in
+/usr/share/doc/neodse-client/ or /usr/share/doc/neodse-server/. Server RPMs install
+NOTICE, THIRD-PARTY-NOTICES and LICENSE in /usr/share/licenses/neodse-server/.
+
+The server also provides the full embedded Swagger license and notices at:
+  /docs/swagger-ui-bundle.js.LICENSE.txt
+
+System libraries and external programs supplied by the Linux distribution have
+their own licenses and notices in the corresponding distribution packages.

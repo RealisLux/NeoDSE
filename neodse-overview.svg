@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="890" viewBox="0 0 1400 890" role="img" aria-labelledby="overview-title overview-desc">
+  <title id="overview-title">Operational dashboards and automated display alerts</title>
+  <desc id="overview-desc">Web dashboards provide continuously updated information. The controller host's authenticated content proxy fetches approved pages, which displays load through the agent's local relay. Monitoring tools, such as Zabbix, Checkmk, Grafana Alerting or Prometheus Alertmanager, are non-exhaustive examples. Their notifications pass through an administrator-provided script or webhook adapter, which makes authenticated calls to the NeoDSE controller. The controller sends separate banner, sound, HDMI-CEC screen power and serial commands to Linux display agents. A supported warning light is connected to an agent over serial. Web pages can use secure WebSocket live updates. An example display shows service metrics, a database latency banner and audible notification playback. Device status and read-only live views return to the controller.</desc>
+  <defs>
+    <style>
+      text { font-family: 'DejaVu Sans', Arial, sans-serif; fill: #0f172a; }
+      .title { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
+      .heading { font-size: 22px; font-weight: 700; }
+      .body { font-size: 17px; fill: #64748b; }
+      .label { font-size: 15px; font-weight: 700; fill: #2563eb; }
+      .small { font-size: 14px; fill: #64748b; }
+      .line { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#2563eb"/></marker>
+    <marker id="alert-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#7c3aed"/></marker>
+    <marker id="hardware-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#c2410c"/></marker>
+    <marker id="status-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#0f766e"/></marker>
+  </defs>
+  <rect width="1400" height="890" fill="#ffffff"/>
+  <text x="32" y="57" class="title">Operational dashboards and automated display alerts</text>
+  <text x="32" y="90" class="body">Control-room example: present infrastructure data and deliver visible and audible incident notifications.</text>
+
+  <!-- Two complementary inputs: web information and monitoring notifications. -->
+  <rect x="32" y="140" width="350" height="180" rx="16" fill="#eff6ff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="56" y="178" class="heading">Web dashboards</text>
+  <text x="56" y="213" class="body">Service health and system metrics</text>
+  <text x="56" y="244" class="body">Secure WebSocket live updates</text>
+  <rect x="56" y="270" width="302" height="28" rx="6" fill="#ffffff"/>
+  <text x="207" y="289" text-anchor="middle" class="small">Example: Grafana service dashboard</text>
+
+  <rect x="32" y="365" width="350" height="264" rx="16" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="56" y="403" class="heading">Monitoring notifications</text>
+  <text x="56" y="426" class="small">Examples (non-exhaustive)</text>
+  <text x="56" y="450" class="body">Zabbix · Checkmk · Grafana Alerting</text>
+  <text x="56" y="476" class="body">Prometheus Alertmanager</text>
+  <path d="M207 488v13" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#alert-arrow)"/>
+  <rect x="56" y="512" width="302" height="91" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="207" y="542" text-anchor="middle" class="label" style="fill:#7c3aed">Script or webhook adapter</text>
+  <text x="207" y="567" text-anchor="middle" class="small">Maps incidents to display actions</text>
+  <text x="207" y="589" text-anchor="middle" class="small">Provided by the administrator</text>
+
+  <!-- Central controller: manual operation and automated API access. -->
+  <rect x="550" y="215" width="300" height="395" rx="16" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+  <text x="574" y="255" class="heading">Controller host</text>
+  <g transform="translate(574 280)" class="line">
+    <rect width="252" height="108" rx="8" fill="#ffffff"/>
+    <path d="M0 24h252m-202 0v84m15-67h110m-110 20h145m-145 20h90"/>
+    <circle cx="25" cy="44" r="3"/><circle cx="25" cy="64" r="3"/><circle cx="25" cy="84" r="3"/>
+  </g>
+  <text x="574" y="423" class="body">Operator dashboard</text>
+  <text x="574" y="452" class="body">Authenticated HTTPS API</text>
+  <text x="574" y="490" class="body">Playlists + content proxy</text>
+  <text x="574" y="519" class="body">Banner and sound commands</text>
+  <text x="574" y="548" class="body">CEC power + schedules</text>
+  <text x="574" y="577" class="body">Serial peripheral commands</text>
+
+  <path d="M394 230h78v75h64" class="line" marker-end="url(#arrow)"/>
+  <text x="466" y="198" text-anchor="middle" class="label">Proxied content</text>
+  <path d="M394 557h142" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#alert-arrow)"/>
+  <text x="466" y="503" text-anchor="middle" class="label" style="fill:#7c3aed">Automated</text>
+  <text x="466" y="527" text-anchor="middle" class="label" style="fill:#7c3aed">API calls</text>
+
+  <!-- Incident outputs executed by the Linux display agent, including attached hardware. -->
+  <rect x="1010" y="140" width="358" height="584" rx="16" fill="#eff6ff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="1034" y="178" class="heading">Example display</text>
+  <text x="1034" y="194" class="small" style="font-size:12px">Linux agent + renderer</text>
+  <rect x="1034" y="200" width="310" height="228" rx="10" fill="#0f172a"/>
+  <rect x="1044" y="210" width="290" height="208" rx="4" fill="#ffffff"/>
+  <text x="1058" y="237" class="label">Service health</text>
+  <rect x="1058" y="250" width="114" height="82" rx="6" fill="#f0fdfa"/>
+  <text x="1070" y="274" class="small">Availability</text>
+  <text x="1070" y="310" class="heading" style="fill:#0f766e">99.9%</text>
+  <rect x="1182" y="250" width="138" height="82" rx="6" fill="#eff6ff"/>
+  <text x="1194" y="274" class="small">Latency</text>
+  <path d="M1194 316l19-14 20 7 19-23 20 9 34-15" class="line"/>
+  <rect x="1054" y="348" width="270" height="58" rx="6" fill="#fff1f2"/>
+  <circle cx="1073" cy="368" r="5" fill="#be123c"/>
+  <text x="1087" y="374" style="font-size:15px;font-weight:700;fill:#be123c">Database latency</text>
+  <text x="1070" y="394" style="font-size:14px;fill:#be123c">Above threshold · Critical</text>
+  <path d="M1189 428v16m-35 0h70" fill="none" stroke="#0f172a" stroke-width="4" stroke-linecap="round"/>
+  <text x="1034" y="480" class="body">Live dashboard with incident banner</text>
+  <g transform="translate(1040 504)" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 12h12L28 0v44L12 32H0Z" fill="#f5f3ff"/>
+    <path d="M39 10q12 12 0 24m10-34q23 22 0 44"/>
+  </g>
+  <text x="1112" y="525" class="label" style="fill:#7c3aed">Notification sound</text>
+  <text x="1112" y="551" class="small">Configured display audio output</text>
+  <!-- Screen power control, executed through the agent's HDMI-CEC adapter. -->
+  <g transform="translate(1040 574)" fill="none" stroke="#c2410c" stroke-width="3" stroke-linecap="round">
+    <path d="M30 0v19M17 8a21 21 0 1 0 26 0"/>
+  </g>
+  <text x="1112" y="596" class="label" style="fill:#c2410c">Screen power · HDMI-CEC</text>
+  <text x="1112" y="621" class="small">Power on / off on supported screens</text>
+
+  <!-- Example supported peripheral: a serial beacon attached to the display agent. -->
+  <g transform="translate(1040 641)" fill="none" stroke="#c2410c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 40V19a16 16 0 0 1 32 0v21Z" fill="#fff7ed"/>
+    <path d="M9 40h42v8H9ZM30 48v12h31M3 15l-5-3m58 3 5-3M30-4v-5"/>
+    <path d="M20 32V20a10 10 0 0 1 10-10"/>
+  </g>
+  <text x="1112" y="660" class="label" style="fill:#c2410c">Warning light · Serial</text>
+  <text x="1112" y="685" class="small">NeoDSE AT-compatible beacon</text>
+
+  <path d="M862 305h134" class="line" marker-end="url(#arrow)"/>
+  <text x="928" y="254" text-anchor="middle" class="label">Playlists</text>
+  <text x="928" y="278" text-anchor="middle" class="label">+ web content</text>
+  <path d="M862 450h134" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#alert-arrow)"/>
+  <text x="928" y="401" text-anchor="middle" class="label" style="fill:#7c3aed">Banner</text>
+  <text x="928" y="425" text-anchor="middle" class="label" style="fill:#7c3aed">and sound</text>
+  <text x="928" y="480" text-anchor="middle" class="small">Separate calls</text>
+  <path d="M862 563h134" fill="none" stroke="#c2410c" stroke-width="3" marker-end="url(#hardware-arrow)"/>
+  <text x="928" y="513" text-anchor="middle" class="label" style="fill:#c2410c">Screen power</text>
+  <text x="928" y="537" text-anchor="middle" class="label" style="fill:#c2410c">and beacon</text>
+
+  <path d="M1189 736v37H700v-149" fill="none" stroke="#0f766e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#status-arrow)"/>
+  <rect x="770" y="758" width="359" height="30" rx="8" fill="#ffffff"/>
+  <text x="949" y="779" text-anchor="middle" class="body" style="fill:#0f766e;font-size:16px">Device status and read-only live view</text>
+  <rect x="32" y="822" width="1336" height="46" rx="12" fill="#f0fdfa"/>
+  <text x="700" y="851" text-anchor="middle" class="body" style="fill:#0f766e;font-weight:700">Self-hosted controller and Linux displays · Administrator-managed network · No cloud dependency</text>
+</svg>

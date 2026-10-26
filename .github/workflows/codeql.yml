@@ -1,0 +1,68 @@
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '55 10 * * 6'
+  workflow_call:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    # Code scanning is unavailable for this private, personally owned repository.
+    # Resume automatically once the repository is public.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    env:
+      GOTOOLCHAIN: local
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { language: go, build-mode: manual }
+          - { language: c-cpp, build-mode: manual }
+          - { language: javascript-typescript, build-mode: none }
+          - { language: python, build-mode: none }
+          - { language: actions, build-mode: none }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.3'
+          check-latest: false
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            tools/*/go.sum
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - if: matrix.language == 'c-cpp'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libjson-glib-dev
+          make ui
+      - if: matrix.language == 'go'
+        run: make build vnc-auth-helper
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1

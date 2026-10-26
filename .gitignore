@@ -1,0 +1,36 @@
+# Build outputs
+/dist/
+/build/
+coverage.out
+__pycache__/
+*.pyc
+
+# Locally generated keys, certificates, and provisioning data
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
+*.keyslot
+*.bak
+.env
+.env.*
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
+*.log
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

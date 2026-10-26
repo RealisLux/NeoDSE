@@ -1,0 +1,10 @@
+# File purpose: Starts the display compositor when a monitor is connected after boot.
+# Copyright (c) 2026 RealisLux
+# SPDX-License-Identifier: MIT
+# Project: https://github.com/RealisLux/NeoDSE
+#
+# neodse-weston.service skips startup while no DRM connector is connected.
+# A connector hotplug evaluates that condition again. A running compositor is
+# unaffected, and a compositor disabled by the operator stays stopped without
+# udev logging a failed program on every hotplug.
+ACTION=="change", SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ENV{HOTPLUG}=="1", RUN+="/bin/sh -c '/usr/bin/systemctl --quiet is-enabled neodse-weston.service || exit 0; exec /usr/bin/systemctl --no-block start neodse-weston.service'"

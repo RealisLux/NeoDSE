@@ -1,0 +1,41 @@
+[Unit]
+Description=NeoDSE Proxy
+After=wg-quick@neodse.service neodse-server.service
+
+[Service]
+User=neodse-proxy
+Group=neodse-proxy
+
+ExecStart=/usr/bin/neodse-proxy --config /etc/neodse/proxy.yaml
+Restart=always
+RestartSec=15
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+ProtectProc=invisible
+ProcSubset=pid
+KeyringMode=private
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,1359 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NeoDSE Control</title>
+    <style>
+      :root {
+        --ink: #162235;
+        --muted: #6a778b;
+        --line: #dfe6ef;
+        --canvas: #f5f7fb;
+        --card: #fff;
+        --blue: #3569f6;
+        --blue-pale: #edf2ff;
+        --green: #13966a;
+        --green-pale: #e9f8f2;
+        --amber: #b96908;
+        --amber-pale: #fff4e4;
+        --red: #d13c4d;
+        --red-pale: #fff0f2;
+        --navy: #172943;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-width: 320px;
+        color: var(--ink);
+        background: var(--canvas);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        font-size: 14px;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      .shell {
+        display: grid;
+        grid-template-columns: 246px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      aside {
+        position: sticky;
+        top: 0;
+        align-self: start;
+        height: 100vh;
+        padding: 26px 15px;
+        color: #d9e4f5;
+        background: var(--navy);
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 10px;
+        border-radius: 9px;
+        background: #fff;
+      }
+      .brand-logo {
+        display: block;
+        width: 180px;
+        height: auto;
+      }
+      .nav-label {
+        padding: 0 11px;
+        color: #8194b1;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+      .nav {
+        display: grid;
+        gap: 3px;
+        margin-top: -16px;
+      }
+      .nav button {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 10px 11px;
+        border: 0;
+        border-radius: 8px;
+        color: #bccae0;
+        background: transparent;
+        text-align: left;
+        font-weight: 650;
+      }
+      .nav button:hover,
+      .nav button.active {
+        color: #fff;
+        background: #263c5c;
+      }
+      .nav-icon {
+        width: 18px;
+        text-align: center;
+        color: #8baaff;
+      }
+      .connection {
+        margin-top: auto;
+        padding: 13px;
+        border: 1px solid #344c70;
+        border-radius: 10px;
+        background: #1c3150;
+      }
+      .connection p {
+        margin: 0 0 8px;
+        font-size: 12px;
+        color: #a9bad4;
+      }
+      .connection .row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        color: #f4f8ff;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #7b8ba3;
+      }
+      .dot.online {
+        background: #31d49c;
+        box-shadow: 0 0 0 4px rgba(49, 212, 156, 0.12);
+      }
+      main {
+        min-width: 0;
+      }
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        min-height: 76px;
+        padding: 0 34px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.88);
+      }
+      .eyebrow {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .topbar h1 {
+        margin: 3px 0 0;
+        font-size: 22px;
+        letter-spacing: -0.035em;
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .connection-role {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+      .button {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 13px;
+        color: #37475e;
+        background: #fff;
+        font-size: 12px;
+        font-weight: 750;
+      }
+      .button:hover {
+        border-color: #b7c7df;
+        background: #f8faff;
+      }
+      .button.primary {
+        border-color: var(--blue);
+        color: #fff;
+        background: var(--blue);
+      }
+      .button.primary:hover {
+        background: #2559e9;
+      }
+      .button.danger {
+        border-color: #f1c3cb;
+        color: #bd2c40;
+        background: #fff;
+      }
+      .content {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 29px 34px 50px;
+      }
+      .setup {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 20px;
+        padding: 25px;
+        border: 1px solid #cddafb;
+        border-radius: 13px;
+        background: linear-gradient(110deg, #eef3ff, #fafcff);
+      }
+      .setup h2 {
+        margin: 0 0 7px;
+        font-size: 18px;
+        letter-spacing: -0.025em;
+      }
+      .setup p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .token-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        align-self: center;
+      }
+      .field {
+        width: 100%;
+        min-height: 39px;
+        padding: 9px 11px;
+        border: 1px solid #cad5e4;
+        border-radius: 8px;
+        outline: none;
+        background: #fff;
+        color: var(--ink);
+      }
+      .field:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px #dce6ff;
+      }
+      .token-line .field {
+        min-width: 0;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin: 24px 0;
+      }
+      .metric {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--card);
+      }
+      .metric-label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.075em;
+        text-transform: uppercase;
+      }
+      .metric-value {
+        margin-top: 10px;
+        font-size: 27px;
+        font-weight: 760;
+        letter-spacing: -0.055em;
+      }
+      .metric-note {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .metric-value.green {
+        color: var(--green);
+      }
+      .metric-value.amber {
+        color: var(--amber);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.78fr) minmax(390px, 1.55fr) minmax(255px, 0.85fr);
+        gap: 15px;
+        align-items: start;
+      }
+      .panel {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--card);
+      }
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 17px 18px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .panel h2 {
+        margin: 0;
+        font-size: 14px;
+        letter-spacing: -0.015em;
+      }
+      .panel-sub {
+        margin: 3px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .agent-list {
+        max-height: 530px;
+        overflow: auto;
+      }
+      .agent {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 13px 17px;
+        border: 0;
+        border-bottom: 1px solid #edf0f5;
+        background: #fff;
+        text-align: left;
+      }
+      .agent:hover,
+      .agent.selected {
+        background: #f4f7ff;
+      }
+      .agent-avatar {
+        display: grid;
+        place-items: center;
+        width: 31px;
+        height: 31px;
+        flex: 0 0 auto;
+        border-radius: 8px;
+        background: #e7edfb;
+        color: #4563af;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .agent-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+        font-weight: 760;
+      }
+      .agent-meta {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .agent-state {
+        margin-left: auto;
+        text-align: right;
+        font-size: 11px;
+        font-weight: 750;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .status .dot {
+        width: 6px;
+        height: 6px;
+      }
+      .status.online {
+        color: var(--green);
+      }
+      .status.online .dot {
+        background: var(--green);
+      }
+      .status.offline {
+        color: var(--muted);
+      }
+      .status.offline .dot {
+        background: #b3bdca;
+      }
+      .display {
+        padding: 18px;
+      }
+      .screen {
+        position: relative;
+        display: grid;
+        place-items: center;
+        aspect-ratio: 16/9;
+        overflow: hidden;
+        border: 7px solid #1c2738;
+        border-radius: 9px;
+        background: linear-gradient(135deg, #1c2a42, #334a70);
+        box-shadow: 0 10px 20px #19243a24;
+      }
+      .screen:before {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 30% 20%, #627da6 0, transparent 42%);
+        content: "";
+      }
+      .screen-content {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+      }
+      .screen-content canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain;
+      }
+      .screen canvas {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        cursor: zoom-in;
+      }
+      .screen-empty {
+        color: #d5e2f8;
+        text-align: center;
+      }
+      .screen-empty strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 15px;
+      }
+      .screen-empty span {
+        font-size: 12px;
+        color: #aebfd9;
+      }
+      .screen-content canvas { cursor: zoom-in; }
+      .screen.expanded {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 20;
+        width: 100vw;
+        width: 100dvw;
+        height: 100vh;
+        height: 100dvh;
+        aspect-ratio: auto;
+        overflow: hidden;
+        border: 0;
+        border-radius: 0;
+        background: #091321;
+      }
+      body.display-expanded { overflow: hidden; }
+      .screen.expanded .screen-content {
+        inset: 0;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .screen.expanded .screen-content canvas {
+        position: absolute;
+        inset: 28px;
+        width: calc(100% - 56px) !important;
+        height: calc(100% - 56px) !important;
+        object-position: center;
+        cursor: default;
+      }
+      .close-display {
+        display: none;
+        position: absolute;
+        z-index: 25;
+        top: 17px;
+        right: 20px;
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 11px;
+        color: #fff;
+        background: #ffffff24;
+        font-weight: 800;
+      }
+      .screen.expanded .close-display { display: block; }
+      .screen.expanded .cec-badge { top: 17px; right: 92px; }
+      .cec-badge {
+        --cec-color: #94a3b8;
+        position: absolute;
+        z-index: 3;
+        top: 10px;
+        right: 10px;
+        max-width: calc(100% - 20px);
+        outline: none;
+      }
+      .cec-badge-summary {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: max-content;
+        max-width: 100%;
+        margin-left: auto;
+        padding: 6px 9px;
+        border: 1px solid #ffffff2e;
+        border-radius: 999px;
+        color: #fff;
+        background: #101927d9;
+        box-shadow: 0 3px 12px #0005;
+        font-size: 10px;
+        font-weight: 800;
+        backdrop-filter: blur(6px);
+      }
+      .cec-badge-dot {
+        width: 7px;
+        height: 7px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: var(--cec-color);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--cec-color) 20%, transparent);
+      }
+      .cec-badge[data-state="on"] {
+        --cec-color: #31d49c;
+      }
+      .cec-badge[data-state="standby"] {
+        --cec-color: #aeb8c6;
+      }
+      .cec-badge[data-state="unknown"] {
+        --cec-color: #f0a43b;
+      }
+      .cec-badge[data-state="error"] {
+        --cec-color: #f05b6d;
+      }
+      .cec-badge-detail {
+        position: absolute;
+        top: calc(100% + 7px);
+        right: 0;
+        width: max-content;
+        max-width: min(300px, calc(100vw - 90px));
+        padding: 8px 10px;
+        border-radius: 7px;
+        color: #e7eef9;
+        background: #101927ee;
+        box-shadow: 0 5px 18px #0007;
+        font-size: 10px;
+        font-weight: 500;
+        line-height: 1.4;
+        opacity: 0;
+        transform: translateY(-3px);
+        pointer-events: none;
+        transition: 0.15s;
+      }
+      .cec-badge:hover .cec-badge-detail,
+      .cec-badge:focus .cec-badge-detail {
+        opacity: 1;
+        transform: none;
+      }
+      .content-state {
+        margin-top: 18px;
+        padding: 14px;
+        border-radius: 8px;
+        background: #f7f9fc;
+      }
+      .content-state b {
+        display: block;
+        font-size: 12px;
+      }
+      .content-state p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        overflow-wrap: anywhere;
+        line-height: 1.45;
+      }
+      .quick {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .quick button {
+        padding: 10px 6px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: #45566f;
+        font-size: 11px;
+        font-weight: 750;
+      }
+      .quick button:hover {
+        border-color: #adc0e4;
+        background: var(--blue-pale);
+        color: #2855c1;
+      }
+      .side-stack {
+        display: grid;
+        gap: 15px;
+      }
+      .stack-body {
+        padding: 16px 17px;
+      }
+      .form-label {
+        display: block;
+        margin: 0 0 6px;
+        color: #536278;
+        font-size: 11px;
+        font-weight: 780;
+      }
+      .stack-body textarea {
+        min-height: 70px;
+        resize: vertical;
+      }
+      .form-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 11px;
+      }
+      .form-row .field {
+        min-width: 0;
+      }
+      .caption {
+        margin: 11px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .activity {
+        display: grid;
+        gap: 0;
+      }
+      .activity-item {
+        display: grid;
+        grid-template-columns: 8px 1fr;
+        gap: 10px;
+        padding: 12px 0;
+        border-bottom: 1px solid #edf0f5;
+      }
+      .activity-item:last-child {
+        border: 0;
+      }
+      .activity-item .dot {
+        margin-top: 5px;
+        width: 7px;
+        height: 7px;
+        background: var(--blue);
+      }
+      .activity-item p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      .activity-item time {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .empty {
+        padding: 30px 17px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+      .toast {
+        position: fixed;
+        right: 24px;
+        bottom: 22px;
+        z-index: 9;
+        width: min(520px, calc(100vw - 48px));
+        padding: 14px 16px;
+        border-radius: 9px;
+        color: #fff;
+        background: #203451;
+        box-shadow: 0 10px 35px #0c18333d;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+        opacity: 0;
+        transform: translateY(12px);
+        pointer-events: none;
+        transition: 0.2s;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: none;
+      }
+      .toast.error {
+        background: #b83243;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .agent-info,
+      .agent-name,
+      .agent-meta {
+        display: block;
+        min-width: 0;
+      }
+      .agent-state {
+        display: grid;
+        justify-items: end;
+        gap: 4px;
+      }
+      .target-toggle {
+        display: flex;
+        gap: 3px;
+        padding: 3px;
+        border-radius: 7px;
+        background: #edf1f7;
+      }
+      .target-toggle button {
+        border: 0;
+        border-radius: 5px;
+        padding: 5px 7px;
+        color: var(--muted);
+        background: transparent;
+        font-size: 10px;
+        font-weight: 800;
+      }
+      .target-toggle button.active {
+        color: #294eae;
+        background: #fff;
+        box-shadow: 0 1px 3px #24395518;
+      }
+      .playlist-items {
+        margin: 7px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .playlist-items li {
+        overflow-wrap: anywhere;
+      }
+      .tool-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 7px;
+      }
+      .tool-grid button {
+        padding: 9px 5px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        color: #45566f;
+        font-size: 10px;
+        font-weight: 750;
+      }
+      .tool-grid button:hover {
+        border-color: #adc0e4;
+        background: var(--blue-pale);
+        color: #2855c1;
+      }
+      .tool-grid button.danger:hover {
+        border-color: #f1c3cb;
+        background: var(--red-pale);
+        color: #bd2c40;
+      }
+      .schedule-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .days {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin: 8px 0;
+      }
+      .days label {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        padding: 4px 5px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        color: #536278;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .switch-line {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 10px;
+        color: #536278;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      @media (max-width: 1100px) {
+        .layout {
+          grid-template-columns: minmax(250px, 0.75fr) minmax(390px, 1.4fr);
+        }
+        /* The detail panel is no longer in a three-column layout here. Keeping
+           it sticky would make it overlap the side panels on intermediate
+           desktop widths instead of remaining in the grid flow. */
+        #agent-detail,
+        #broadcast-detail {
+          position: static;
+        }
+        .side-stack {
+          grid-column: 1/-1;
+          grid-template-columns: 1fr 1fr;
+        }
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 760px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+        aside {
+          display: none;
+        }
+        .topbar {
+          padding: 0 19px;
+        }
+        .topbar .eyebrow {
+          display: none;
+        }
+        .content {
+          padding: 20px 17px;
+        }
+        .setup,
+        .layout,
+        .side-stack {
+          grid-template-columns: 1fr;
+        }
+        .metrics {
+          grid-template-columns: 1fr 1fr;
+        }
+        .actions .button:not(.primary) {
+          display: none;
+        }
+        .token-line {
+          flex-wrap: wrap;
+        }
+        .token-line .field {
+          flex-basis: 100%;
+        }
+        .metric {
+          padding: 14px;
+        }
+        .metric-value {
+          font-size: 22px;
+        }
+      }
+      .operations {
+        margin-top: 8px;
+      }
+      .quick button.danger {
+        border-color: #f1c3cb;
+        color: #bd2c40;
+      }
+      .quick button.danger:hover {
+        background: var(--red-pale);
+      }
+      .display > .quick:not(.operations) {
+        display: none;
+      }
+      .side-stack .tool-grid [data-operation] {
+        display: none;
+      }
+      .cec-controls {
+        margin-bottom: 14px;
+      }
+      .activity {
+        max-height: 360px;
+        overflow-y: auto;
+      }
+      @media (min-width: 1101px) {
+        #agent-detail,
+        #broadcast-detail {
+          position: sticky;
+          top: 18px;
+        }
+      }
+      @media (max-width: 760px) {
+        #agent-detail,
+        #broadcast-detail {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <img class="brand-logo" src="/dashboard/logo.png" alt="NeoDSE" />
+        </div>
+        <span class="nav-label">Workspace</span>
+        <nav class="nav">
+          <button class="active" type="button">▦ &nbsp; Control center</button
+          ><button type="button" data-docs>⌘ &nbsp; API documentation</button>
+        </nav>
+        <div class="connection">
+          <p>Controller connection</p>
+          <div class="row">
+            <span class="dot" id="connection-dot"></span
+            ><span id="connection-label">Not connected</span>
+          </div>
+        </div>
+      </aside>
+      <main>
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">OPERATIONS / CONTROL CENTER</div>
+            <h1>Display fleet</h1>
+          </div>
+          <div class="actions">
+            <span class="connection-role" id="connection-role">Role: —</span
+            ><button class="button" type="button" id="logout">Log out</button
+            ><button class="button primary" type="button" id="refresh">↻ Refresh</button>
+          </div>
+        </header>
+        <div class="content">
+          <section id="setup" class="setup">
+            <div>
+              <h2>Connect to your controller</h2>
+              <p>
+                Enter a service-account bearer token to view only the displays and controls your
+                role allows. The token stays in this browser tab and is never saved.
+              </p>
+            </div>
+            <div class="token-line">
+              <input
+                class="field"
+                id="token"
+                type="password"
+                autocomplete="off"
+                placeholder="Paste bearer token"
+              /><button class="button primary" id="connect" type="button">Connect</button>
+            </div>
+          </section>
+          <section id="dashboard" class="hidden">
+            <div class="metrics">
+              <article class="metric">
+                <div class="metric-label">Total displays</div>
+                <div class="metric-value" id="total">—</div>
+                <div class="metric-note">visible in your scope</div>
+              </article>
+              <article class="metric">
+                <div class="metric-label">Online now</div>
+                <div class="metric-value green" id="online">—</div>
+                <div class="metric-note">authenticated agents</div>
+              </article>
+              <article class="metric">
+                <div class="metric-label">Needs attention</div>
+                <div class="metric-value amber" id="attention">—</div>
+                <div class="metric-note">offline or unauthenticated</div>
+              </article>
+              <article class="metric">
+                <div class="metric-label">Server</div>
+                <div class="metric-value" id="server">—</div>
+                <div class="metric-note" id="server-note">checking readiness</div>
+              </article>
+            </div>
+            <div class="layout">
+              <section class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h2>Displays</h2>
+                    <p class="panel-sub" id="agent-count">Loading inventory…</p>
+                  </div>
+                  <div class="target-toggle">
+                    <button type="button" id="target-single" class="active">Single</button
+                    ><button type="button" id="target-broadcast">Broadcast</button>
+                  </div>
+                </div>
+                <div class="agent-list" id="agents"></div>
+              </section>
+              <section class="panel" id="agent-detail">
+                <div class="panel-head">
+                  <div>
+                    <h2 id="selected-title">Select a display</h2>
+                    <p class="panel-sub" id="selected-subtitle">
+                      Choose a display from the fleet list
+                    </p>
+                  </div>
+                  <span class="status offline" id="selected-status"
+                    ><span class="dot"></span>—</span
+                  >
+                </div>
+                <div class="display">
+                  <div class="screen" id="screen" aria-expanded="false">
+                    <div class="screen-content" id="screen-content">
+                      <div class="screen-empty">
+                        <strong>No display selected</strong
+                        ><span>The read-only live view will appear here.</span>
+                      </div>
+                    </div>
+                    <button class="close-display" id="close-display" type="button">Close</button>
+                    <div
+                      class="cec-badge"
+                      data-cec-badge
+                      data-state="unknown"
+                      tabindex="0"
+                      role="status"
+                      aria-label="HDMI-CEC: select a display"
+                    >
+                      <span class="cec-badge-summary"
+                        ><span class="cec-badge-dot"></span
+                        ><span data-cec-summary>CEC · —</span></span
+                      ><span class="cec-badge-detail" data-cec-detail
+                        >Select a display to view its CEC status.</span
+                      >
+                    </div>
+                  </div>
+                  <div class="content-state">
+                    <b id="content-title">Content state</b>
+                    <p id="content-detail">Choose a display to inspect its desired content.</p>
+                  </div>
+                  <div class="quick">
+                    <button type="button" data-action="display/on" disabled>Power on</button
+                    ><button type="button" data-action="display/off" disabled>Power off</button
+                    ><button type="button" data-action="playlist" data-method="DELETE" disabled>
+                      Restore waiting screen
+                    </button>
+                  </div>
+                  <div class="quick operations">
+                    <button type="button" data-operation="restart" disabled>Restart</button
+                    ><button type="button" data-operation="reboot" disabled>Reboot</button
+                    ><button class="danger" type="button" data-operation="shutdown" disabled>
+                      Shut down
+                    </button>
+                  </div>
+                </div>
+              </section>
+              <section class="panel hidden" id="broadcast-detail">
+                <div class="panel-head">
+                  <div>
+                    <h2>Broadcast mode</h2>
+                    <p class="panel-sub">All displays authorized by this token</p>
+                  </div>
+                  <span class="status online"><span class="dot"></span>Active</span>
+                </div>
+                <div class="display">
+                  <div class="screen">
+                    <div class="screen-empty">
+                      <strong>Fleet-wide controls</strong
+                      ><span
+                        >Publish content, send alerts, or run supported operations across the
+                        authorized display scope.</span
+                      >
+                    </div>
+                  </div>
+                  <div class="content-state">
+                    <b>Individual display details are hidden</b>
+                    <p>
+                      Live display state, current playlist state, and power schedules apply to one
+                      display and are intentionally unavailable in broadcast mode.
+                    </p>
+                  </div>
+                  <div class="quick">
+                    <button type="button" data-action="display/on" disabled>Power on all</button
+                    ><button type="button" data-action="display/off" disabled>Power off all</button
+                    ><button type="button" data-action="playlist" data-method="DELETE" disabled>
+                      Restore all status pages
+                    </button>
+                  </div>
+                  <div class="quick operations">
+                    <button type="button" data-operation="restart" disabled>Restart</button
+                    ><button type="button" data-operation="reboot" disabled>Reboot</button
+                    ><button class="danger" type="button" data-operation="shutdown" disabled>
+                      Shut down
+                    </button>
+                  </div>
+                </div>
+              </section>
+              <div class="side-stack">
+                <section class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>Publish content</h2>
+                      <p class="panel-sub" id="publish-target">To the selected display</p>
+                    </div>
+                  </div>
+                  <div class="stack-body">
+                    <label class="form-label" for="urls">Playlist URLs</label
+                    ><textarea
+                      class="field"
+                      id="urls"
+                      placeholder="One HTTP(S) URL per line, up to six"
+                    ></textarea>
+                    <div class="form-row">
+                      <input
+                        class="field"
+                        id="interval"
+                        type="number"
+                        min="10"
+                        max="86400"
+                        value="15"
+                        aria-label="Seconds per page, used with several URLs"
+                      /><button class="button primary" id="publish" type="button" disabled>
+                        Publish
+                      </button>
+                    </div>
+                    <div class="form-row">
+                      <button class="button" id="reload-content" type="button" disabled>
+                        Reload web content</button
+                      ><button
+                        class="button"
+                        type="button"
+                        data-action="playlist"
+                        data-method="DELETE"
+                        disabled
+                      >
+                        Restore waiting screen
+                      </button>
+                    </div>
+                    <label class="form-label" for="sync-playback-at" style="margin-top: 14px"
+                      >Synchronization time (controller timezone)</label
+                    >
+                    <div class="form-row">
+                      <input
+                        class="field"
+                        id="sync-playback-at"
+                        type="datetime-local"
+                        aria-label="Synchronization time in controller timezone"
+                        disabled
+                      /><button class="button" id="sync-playback" type="button" disabled>
+                        Synchronize playback
+                      </button>
+                    </div>
+                    <p class="caption">
+                      Enter the date and time in the controller’s timezone to synchronize the
+                      active playlist.
+                    </p>
+                    <p class="caption">
+                      Changes are queued to the agent and made controller-authoritative for
+                      reconnects.
+                    </p>
+                  </div>
+                </section>
+                <section class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>Notifications</h2>
+                      <p class="panel-sub">To the active target</p>
+                    </div>
+                  </div>
+                  <div class="stack-body">
+                    <div class="tool-grid">
+                      <button type="button" data-alert="sound/info" disabled>Info sound</button
+                      ><button type="button" data-alert="sound/warning" disabled>
+                        Warning sound</button
+                      ><button type="button" data-alert="sound/critical" disabled>
+                        Critical sound</button
+                      ><button type="button" data-operation="restart" disabled>Restart</button
+                      ><button type="button" data-operation="reboot" disabled>Reboot</button
+                      ><button class="danger" type="button" data-operation="shutdown" disabled>
+                        Shut down
+                      </button>
+                    </div>
+                    <label class="form-label" for="banner-message" style="margin-top: 14px"
+                      >Visual banner</label
+                    ><input
+                      class="field"
+                      id="banner-message"
+                      placeholder="Message for the display"
+                    />
+                    <div class="form-row">
+                      <select class="field" id="banner-severity" aria-label="Banner severity">
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option></select
+                      ><input
+                        class="field"
+                        id="banner-duration"
+                        type="number"
+                        min="1"
+                        max="300"
+                        value="20"
+                        aria-label="Banner duration in seconds"
+                      /><button class="button" id="send-banner" type="button" disabled>Send</button>
+                    </div>
+                  </div>
+                </section>
+                <section class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>Peripheral controller</h2>
+                      <p class="panel-sub">Structured peripheral commands</p>
+                    </div>
+                  </div>
+                  <div class="stack-body">
+                    <label class="form-label">Beacon</label>
+                    <div class="tool-grid">
+                      <button
+                        type="button"
+                        data-serial-command="beacon"
+                        data-serial-state="on"
+                        disabled
+                      >
+                        On</button
+                      ><button
+                        type="button"
+                        data-serial-command="beacon"
+                        data-serial-state="off"
+                        disabled
+                      >
+                        Off</button
+                      ><button
+                        type="button"
+                        data-serial-command="beacon"
+                        data-serial-state="blink"
+                        disabled
+                      >
+                        Blink
+                      </button>
+                    </div>
+                    <label class="form-label" for="beacon-period" style="margin-top: 11px"
+                      >Blink period (ms)</label
+                    ><input
+                      class="field"
+                      id="beacon-period"
+                      type="number"
+                      min="100"
+                      max="60000"
+                      value="500"
+                      aria-label="Beacon blink period in milliseconds"
+                    /><label class="form-label" style="margin-top: 14px">Buzzer</label>
+                    <div class="tool-grid">
+                      <button
+                        type="button"
+                        data-serial-command="buzzer"
+                        data-serial-state="on"
+                        disabled
+                      >
+                        On</button
+                      ><button
+                        type="button"
+                        data-serial-command="buzzer"
+                        data-serial-state="off"
+                        disabled
+                      >
+                        Off</button
+                      ><button type="button" data-serial-command="status" disabled>Status</button>
+                    </div>
+                    <label class="form-label" for="relay-id" style="margin-top: 14px">Relay</label>
+                    <div class="form-row">
+                      <input
+                        class="field"
+                        id="relay-id"
+                        type="number"
+                        min="1"
+                        max="32"
+                        value="1"
+                        aria-label="Relay ID"
+                      /><button
+                        type="button"
+                        class="button"
+                        data-serial-command="relay"
+                        data-serial-state="on"
+                        disabled
+                      >
+                        On</button
+                      ><button
+                        type="button"
+                        class="button"
+                        data-serial-command="relay"
+                        data-serial-state="off"
+                        disabled
+                      >
+                        Off
+                      </button>
+                    </div>
+                    <div class="form-row">
+                      <button type="button" class="button" data-serial-command="info" disabled>
+                        Device info
+                      </button>
+                    </div>
+                    <p class="caption">
+                      Commands are validated and translated by the agent; this interface never sends
+                      raw AT text.
+                    </p>
+                  </div>
+                </section>
+                <section class="panel" id="schedule-panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>Screen control</h2>
+                      <p class="panel-sub" id="schedule-note">
+                        Select a display to edit its weekly schedule
+                      </p>
+                    </div>
+                  </div>
+                  <div class="stack-body">
+                    <div class="cec-controls">
+                      <div class="tool-grid">
+                        <button type="button" data-action="display/on" disabled>Power on</button
+                        ><button type="button" data-action="display/off" disabled>Power off</button
+                        ><button type="button" data-action="display/active" disabled>
+                          Select active HDMI source
+                        </button>
+                      </div>
+                      <p class="caption hidden" id="schedule-broadcast-note">
+                        Power schedules are available when a single display is selected.
+                      </p>
+                    </div>
+                    <div class="schedule-config">
+                      <div class="schedule-grid">
+                        <label
+                          ><span class="form-label">Power on</span
+                          ><input class="field" id="power-on" type="time" value="08:00" /></label
+                        ><label
+                          ><span class="form-label">Power off</span
+                          ><input class="field" id="power-off" type="time" value="18:00"
+                        /></label>
+                      </div>
+                      <div class="days" id="schedule-days">
+                        <label><input type="checkbox" value="monday" checked />Mon</label
+                        ><label><input type="checkbox" value="tuesday" checked />Tue</label
+                        ><label><input type="checkbox" value="wednesday" checked />Wed</label
+                        ><label><input type="checkbox" value="thursday" checked />Thu</label
+                        ><label><input type="checkbox" value="friday" checked />Fri</label
+                        ><label><input type="checkbox" value="saturday" />Sat</label
+                        ><label><input type="checkbox" value="sunday" />Sun</label>
+                      </div>
+                      <label class="switch-line"
+                        ><input id="schedule-enabled" type="checkbox" checked /> Schedule
+                        enabled</label
+                      >
+                      <label class="switch-line"
+                        ><input id="schedule-reminder" type="checkbox" checked /> Show power-off
+                        reminder banner</label
+                      >
+                      <div class="form-row">
+                        <button class="button primary" id="save-schedule" type="button" disabled>
+                          Save schedule</button
+                        ><button class="button danger" id="delete-schedule" type="button" disabled>
+                          Remove
+                        </button>
+                      </div>
+                      <p class="caption">
+                        Schedules require an administrator token and use the controller’s local
+                        time.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+                <section class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>Recent activity</h2>
+                      <p class="panel-sub">This browser session</p>
+                    </div>
+                  </div>
+                  <div class="stack-body activity" id="activity">
+                    <div class="empty">Commands will appear here.</div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <script type="module" src="/dashboard/app.js"></script>
+  </body>
+</html>

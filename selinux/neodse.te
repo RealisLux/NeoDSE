@@ -1,0 +1,95 @@
+# NeoDSE — SELinux policy for amd64 server-side services.
+# Copyright (c) 2026 RealisLux
+# SPDX-License-Identifier: MIT
+# Project: https://github.com/RealisLux/NeoDSE
+
+policy_module(neodse, 1.0.0)
+
+type neodse_server_t;
+type neodse_server_exec_t;
+init_daemon_domain(neodse_server_t, neodse_server_exec_t)
+
+type neodse_proxy_t;
+type neodse_proxy_exec_t;
+init_daemon_domain(neodse_proxy_t, neodse_proxy_exec_t)
+
+type neodse_transport_t;
+type neodse_transport_exec_t;
+init_daemon_domain(neodse_transport_t, neodse_transport_exec_t)
+
+gen_require(`
+    type cert_t;
+    type http_port_t;
+    type init_t;
+    type squid_port_t;
+    type sysfs_t;
+    type transproxy_port_t;
+    type unconfined_t;
+')
+
+allow init_t neodse_server_t:process2 nnp_transition;
+allow init_t neodse_proxy_t:process2 nnp_transition;
+allow init_t neodse_transport_t:process2 nnp_transition;
+
+type neodse_etc_t;
+files_config_file(neodse_etc_t)
+
+type neodse_server_var_lib_t;
+files_type(neodse_server_var_lib_t)
+
+type neodse_server_runtime_t;
+files_pid_file(neodse_server_runtime_t)
+
+allow neodse_server_t self:tcp_socket create_stream_socket_perms;
+allow neodse_server_t http_port_t:tcp_socket name_bind;
+corenet_tcp_bind_all_nodes(neodse_server_t)
+corenet_tcp_bind_all_unreserved_ports(neodse_server_t)
+corenet_tcp_connect_generic_port(neodse_server_t)
+allow neodse_server_t transproxy_port_t:tcp_socket name_connect;
+read_files_pattern(neodse_server_t, neodse_etc_t, neodse_etc_t)
+manage_dirs_pattern(neodse_server_t, neodse_server_var_lib_t, neodse_server_var_lib_t)
+manage_files_pattern(neodse_server_t, neodse_server_var_lib_t, neodse_server_var_lib_t)
+allow neodse_server_t neodse_server_var_lib_t:file map;
+
+# Locked start: root sends the database passphrase over a Unix socket in
+# /run/neodse-server; the controller checks that the peer UID is 0.
+allow neodse_server_t self:unix_stream_socket create_stream_socket_perms;
+manage_sock_files_pattern(neodse_server_t, neodse_server_runtime_t, neodse_server_runtime_t)
+allow unconfined_t neodse_server_t:unix_stream_socket connectto;
+
+allow neodse_transport_t self:tcp_socket create_stream_socket_perms;
+corenet_tcp_bind_generic_node(neodse_transport_t)
+corenet_tcp_bind_all_unreserved_ports(neodse_transport_t)
+read_files_pattern(neodse_transport_t, neodse_etc_t, neodse_etc_t)
+
+allow neodse_proxy_t self:tcp_socket create_stream_socket_perms;
+allow neodse_proxy_t self:udp_socket create_socket_perms;
+allow neodse_proxy_t squid_port_t:tcp_socket name_bind;
+corenet_tcp_bind_all_nodes(neodse_proxy_t)
+corenet_tcp_bind_all_unreserved_ports(neodse_proxy_t)
+corenet_tcp_sendrecv_all_if(neodse_proxy_t)
+corenet_tcp_sendrecv_all_nodes(neodse_proxy_t)
+corenet_tcp_sendrecv_all_ports(neodse_proxy_t)
+corenet_tcp_connect_all_ports(neodse_proxy_t)
+corenet_udp_sendrecv_all_if(neodse_proxy_t)
+corenet_udp_sendrecv_all_nodes(neodse_proxy_t)
+corenet_udp_sendrecv_all_ports(neodse_proxy_t)
+read_files_pattern(neodse_proxy_t, neodse_etc_t, neodse_etc_t)
+files_read_etc_files(neodse_proxy_t)
+allow neodse_proxy_t cert_t:dir { getattr open read search };
+read_files_pattern(neodse_proxy_t, cert_t, cert_t)
+read_lnk_files_pattern(neodse_proxy_t, cert_t, cert_t)
+# Includes a resolv.conf symlink into the NetworkManager or resolved runtime.
+sysnet_read_config(neodse_proxy_t)
+
+# The Go runtime reads the transparent huge page size and the unit's cgroup
+# CPU limit for GOMAXPROCS. The units' ProcSubset=pid hides /proc/sys.
+allow neodse_server_t sysfs_t:file read_file_perms;
+fs_read_cgroup_files(neodse_server_t)
+allow neodse_proxy_t sysfs_t:file read_file_perms;
+fs_read_cgroup_files(neodse_proxy_t)
+allow neodse_transport_t sysfs_t:file read_file_perms;
+fs_read_cgroup_files(neodse_transport_t)
+
+# Read-only kernel link/address/route inspection for WireGuard startup validation.
+allow { neodse_server_t neodse_transport_t neodse_proxy_t } self:netlink_route_socket { create bind getattr read write setopt nlmsg_read };
