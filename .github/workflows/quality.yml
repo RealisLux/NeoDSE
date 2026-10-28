@@ -2,6 +2,11 @@ name: Reusable quality gate
 
 on:
   workflow_call:
+    inputs:
+      full-integration:
+        description: Run both ten-minute fleet soaks instead of one-minute smoke checks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -16,6 +21,8 @@ jobs:
     timeout-minutes: 75
     env:
       GOTOOLCHAIN: local
+      FLEET_DURATION: ${{ inputs.full-integration && '10m' || '1m' }}
+      FLEET_TIMEOUT: ${{ inputs.full-integration && '15m' || '3m' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,12 +58,12 @@ jobs:
           make verify-release-tests
       - name: Fuzz smoke tests
         run: make fuzz-smoke FUZZ_TIME=15s 2>&1 | tee fuzz.log
-      - name: Exercise 100 displays with the race detector
-        run: make integration INTEGRATION_RACE=true INTEGRATION_DURATION=10m INTEGRATION_TIMEOUT=15m 2>&1 | tee fleet.log
-      - name: Verify production-build fleet resource bounds
+      - name: Exercise 100 displays with the race detector (${{ env.FLEET_DURATION }})
+        run: make integration INTEGRATION_RACE=true INTEGRATION_DURATION="${FLEET_DURATION}" INTEGRATION_TIMEOUT="${FLEET_TIMEOUT}" 2>&1 | tee fleet.log
+      - name: Verify production-build fleet resource bounds (${{ env.FLEET_DURATION }})
         env:
           CGO_ENABLED: '0'
-        run: make integration INTEGRATION_RACE=false INTEGRATION_DURATION=10m INTEGRATION_TIMEOUT=15m BUILD_DIR=build/fleet-production 2>&1 | tee fleet-production.log
+        run: make integration INTEGRATION_RACE=false INTEGRATION_DURATION="${FLEET_DURATION}" INTEGRATION_TIMEOUT="${FLEET_TIMEOUT}" BUILD_DIR=build/fleet-production 2>&1 | tee fleet-production.log
       - name: Record security coverage
         run: |
           make security-coverage

@@ -234,14 +234,24 @@ func TestPackagesDeclareRequiredHostDependencies(t *testing.T) {
 	}
 }
 
-// TestQualityGateRetainsBothFleetModes protects production memory checks and independent race evidence.
+// TestQualityGateRetainsBothFleetModes protects both required modes and their
+// separate evidence while allowing shorter routine checks.
 func TestQualityGateRetainsBothFleetModes(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(repositoryRoot(t), ".github", "workflows", "quality.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var workflow struct {
+		On struct {
+			WorkflowCall struct {
+				Inputs map[string]struct {
+					Type    string
+					Default bool
+				}
+			} `yaml:"workflow_call"`
+		}
 		Jobs map[string]struct {
+			Env   map[string]string
 			Steps []struct {
 				Uses, Run, If   string
 				ContinueOnError bool `yaml:"continue-on-error"`
@@ -252,6 +262,15 @@ func TestQualityGateRetainsBothFleetModes(t *testing.T) {
 	}
 	if err := yaml.Unmarshal(source, &workflow); err != nil {
 		t.Fatal(err)
+	}
+	profile := workflow.On.WorkflowCall.Inputs["full-integration"]
+	if profile.Type != "boolean" || profile.Default {
+		t.Fatal("routine callers must default to short integration checks")
+	}
+	profileEnv := workflow.Jobs["go-security"].Env
+	if profileEnv["FLEET_DURATION"] != "${{ inputs.full-integration && '10m' || '1m' }}" ||
+		profileEnv["FLEET_TIMEOUT"] != "${{ inputs.full-integration && '15m' || '3m' }}" {
+		t.Fatal("fleet profiles must select one-minute smoke checks or ten-minute soaks")
 	}
 	evidence := make(map[string]bool)
 	type fleetEvidence struct{ results, log string }
@@ -288,8 +307,8 @@ func TestQualityGateRetainsBothFleetModes(t *testing.T) {
 		if (mode != "true" && mode != "false") || modes[mode].results != "" {
 			t.Fatalf("fleet phases must explicitly select each race mode once: %q", mode)
 		}
-		if arguments["INTEGRATION_DURATION"] != "10m" || arguments["INTEGRATION_TIMEOUT"] != "15m" {
-			t.Fatal("both fleet phases must complete the ten-minute workload within fifteen minutes")
+		if arguments["INTEGRATION_DURATION"] != `"${FLEET_DURATION}"` || arguments["INTEGRATION_TIMEOUT"] != `"${FLEET_TIMEOUT}"` {
+			t.Fatal("both fleet phases must use the selected duration and timeout")
 		}
 		buildDirectory := arguments["BUILD_DIR"]
 		if buildDirectory == "" {
@@ -311,6 +330,49 @@ func TestQualityGateRetainsBothFleetModes(t *testing.T) {
 			if !evidence[path] {
 				t.Errorf("fleet evidence must be uploaded even after failure: %s", path)
 			}
+		}
+	}
+}
+
+// TestFleetSoakCallers retains full qualification for releases, schedules and
+// explicit manual requests, independent of the reusable workflow's smoke default.
+func TestFleetSoakCallers(t *testing.T) {
+	for _, file := range []string{"ci.yml", "release.yml"} {
+		source, err := os.ReadFile(filepath.Join(repositoryRoot(t), ".github", "workflows", file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var workflow struct {
+			On struct {
+				WorkflowDispatch struct {
+					Inputs map[string]struct {
+						Type    string
+						Default bool
+					}
+				} `yaml:"workflow_dispatch"`
+			}
+			Jobs map[string]struct {
+				Uses string
+				With map[string]any
+			}
+		}
+		if err := yaml.Unmarshal(source, &workflow); err != nil {
+			t.Fatal(err)
+		}
+		if file == "release.yml" {
+			job := workflow.Jobs["quality-gate"]
+			if job.Uses != "./.github/workflows/quality.yml" || job.With["full-integration"] != true {
+				t.Fatal("tag and manual release builds must always require full fleet soaks")
+			}
+			continue
+		}
+		job := workflow.Jobs["quality"]
+		if job.Uses != "./.github/workflows/quality.yml" || job.With["full-integration"] != "${{ github.event_name == 'schedule' || inputs.full-integration == true }}" {
+			t.Fatal("scheduled CI and manual full requests must use full fleet soaks")
+		}
+		input := workflow.On.WorkflowDispatch.Inputs["full-integration"]
+		if input.Type != "boolean" || input.Default {
+			t.Fatal("manual CI must expose an optional full fleet soak")
 		}
 	}
 }

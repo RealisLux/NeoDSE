@@ -243,6 +243,8 @@ jobs:
   quality-gate:
     needs: release-policy
     uses: ./.github/workflows/quality.yml
+    with:
+      full-integration: true
 
   codeql:
     needs: release-policy

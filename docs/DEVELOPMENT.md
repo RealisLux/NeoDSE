@@ -121,11 +121,22 @@ JPEG viewers. This does not measure continuous high-motion video capacity.
 Viewers check exact fixture bytes and JPEG dimensions without decoding every
 pixel buffer in the same process as the controller and transport.
 
-CI runs both ten-minute fleet phases. The race phase checks heap, workers and
-descriptors; its resident memory includes race detector allocations. The non-race
-phase disables CGO, matching packaged Go programs, and checks resident growth
-against the initial baseline plus 256 MiB. These samples measure neither peak
-memory nor long-term capacity.
+Routine pull requests and pushes run each fleet mode for one minute (three-minute
+test timeout). Release builds and the weekly scheduled CI run use ten minutes
+per mode (fifteen-minute test timeout). Both modes remain required and retain
+separate logs and JSON evidence in every profile. This reduces routine timed
+workload from twenty minutes to two, excluding setup and compilation.
+
+To request full soaks outside a release, select **CI → Run workflow** and enable
+`full-integration`. Manual CI defaults to the short profile; the release workflow
+always requests full soaks, including manual package builds.
+
+The race phase checks heap, workers and descriptors; its resident memory includes
+race detector allocations. The non-race phase disables CGO, matching packaged Go
+programs, and checks resident growth against the initial baseline plus 256 MiB.
+Short runs provide smoke coverage; they may not reach every periodic reconnect
+or expose gradual resource growth. Full soaks retain that evidence. Neither
+profile measures peak memory or long-term capacity.
 
 Use a longer soak when lifecycle, timer or retention changes carry a risk that
 needs more time to appear, when resource growth is unexplained, or when a

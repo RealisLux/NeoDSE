@@ -149,7 +149,11 @@ rerun it.
 
 ## Retain evidence
 
-The reusable quality gate runs both ten-minute fleet phases. Logs, packages and
-native diagnostics stay in CI for 90 days, subject to repository limits. Before
-they expire, export evidence to durable, access-controlled storage and keep it
-throughout the release's support lifetime.
+Release builds explicitly request both ten-minute fleet phases from the reusable
+quality gate, including manually triggered package builds. Routine CI's shorter
+fleet smoke checks do not replace release qualification. Weekly CI and manual
+CI with `full-integration` enabled also run the full soaks.
+
+Logs, packages and native diagnostics stay in CI for 90 days, subject to
+repository limits. Before they expire, export evidence to durable,
+access-controlled storage and keep it throughout the release's support lifetime.

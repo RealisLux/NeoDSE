@@ -6,6 +6,12 @@ on:
     branches: [main, dev]
   schedule:
     - cron: '5 10 * * 6'
+  workflow_dispatch:
+    inputs:
+      full-integration:
+        description: Run both ten-minute fleet soaks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -21,6 +27,8 @@ concurrency:
 jobs:
   quality:
     uses: ./.github/workflows/quality.yml
+    with:
+      full-integration: ${{ github.event_name == 'schedule' || inputs.full-integration == true }}
 
   dependency-review:
     # The dependency-review API is unavailable to private personal repositories.
