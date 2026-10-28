@@ -193,9 +193,9 @@ jobs:
           done
       - name: Extract package payload for binary dependency discovery
         run: bash scripts/stage-package-sbom.sh build/package-sbom "dist/${{ steps.asset.outputs.name }}"
-      - name: Build and verify pinned release scanners
-        run: make verify-sbom-tools
-      - name: Generate package SBOM with the verified scanner
+      - name: Build pinned release scanners
+        run: make sbom-tools
+      - name: Generate package SBOM
         run: |
           read -r package_sha256 _ < <(sha256sum "dist/${{ steps.asset.outputs.name }}")
           build/tools/syft scan dir:build/package-sbom --source-name "sha256:${package_sha256}" \

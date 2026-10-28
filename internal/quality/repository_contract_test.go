@@ -366,8 +366,8 @@ func TestReleaseWorkflowPreservesTargetAndPublicationContract(t *testing.T) {
 	requireFileText(t, root, ".github/workflows/codeql.yml", "if: github.event.repository.private == false")
 }
 
-// TestReleaseScannerVersionsArePinned requires source-built, verified scanners
-// from one pinned graph in the package job.
+// TestReleaseScannerVersionsArePinned requires source-built scanners from the
+// committed graph, with tool vulnerability auditing independent of publication.
 func TestReleaseScannerVersionsArePinned(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(repositoryRoot(t), ".github", "workflows", "release.yml"))
 	if err != nil {
@@ -385,25 +385,28 @@ func TestReleaseScannerVersionsArePinned(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, job := range []string{"packages"} {
-		verified := false
+		built := false
 		generated := false
 		details := workflow.Jobs[job]
 		for _, step := range details.Steps {
 			if strings.HasPrefix(step.Uses, "anchore/") {
-				t.Errorf("%s: downloaded scanner bypasses the source/binary vulnerability gate", job)
+				t.Errorf("%s: downloaded scanner bypasses the pinned module graph", job)
 			}
-			if strings.Contains(step.Run, "make verify-sbom-tools") {
-				verified = true
+			if strings.Contains(step.Run, "make sbom-tools") {
+				built = true
+			}
+			if strings.Contains(step.Run, "verify-sbom-tools") || strings.Contains(step.Run, "verify-tool-vulnerabilities") {
+				t.Errorf("%s: tool advisories must be audited independently of publication", job)
 			}
 			if strings.Contains(step.Run, "build/tools/syft scan") {
 				generated = true
-				if !verified {
-					t.Errorf("%s: SBOM generation precedes scanner verification", job)
+				if !built {
+					t.Errorf("%s: SBOM generation precedes the pinned scanner build", job)
 				}
 			}
 		}
-		if !verified || !generated {
-			t.Errorf("%s: source-built scanner verification and SBOM generation are required", job)
+		if !built || !generated {
+			t.Errorf("%s: source-built scanners and SBOM generation are required", job)
 		}
 	}
 	module, err := os.ReadFile(filepath.Join(repositoryRoot(t), "tools", "sbom", "go.mod"))
@@ -808,7 +811,7 @@ func TestRPMStagingExtractsBuiltPackage(t *testing.T) {
 	root := repositoryRoot(t)
 	nfpm := filepath.Join(root, "build", "tools", "nfpm")
 	if _, err := os.Stat(nfpm); err != nil {
-		t.Skip("build the pinned nFPM with make security-tools for RPM staging checks")
+		t.Skip("build the pinned nFPM with make packaging-tools for RPM staging checks")
 	}
 	dir := t.TempDir()
 	payload := []byte("package content\n")
@@ -875,7 +878,7 @@ func TestClientFilesArePackagedAsConfiguration(t *testing.T) {
 	root := repositoryRoot(t)
 	nfpm := filepath.Join(root, "build", "tools", "nfpm")
 	if _, err := os.Stat(nfpm); err != nil {
-		t.Skip("build the pinned nFPM with make security-tools for client configuration checks")
+		t.Skip("build the pinned nFPM with make packaging-tools for client configuration checks")
 	}
 	source, err := os.ReadFile(filepath.Join(root, "packaging", "nfpm-client.yaml"))
 	if err != nil {

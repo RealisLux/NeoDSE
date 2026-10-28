@@ -7,7 +7,9 @@ Use this checklist for stable and prerelease tags. See
 
 ## Repository controls
 
-- Protect `main`, `dev` and `v*` tags and require CI.
+- Protect `main`, `dev` and `v*` tags and require the CI product checks. Keep
+  Tooling maintenance's `tool-audit` and all-manifest `dependency-review` checks
+  outside the required branch checks; assess their findings separately.
 - Configure production release with permitted deployment tags. Enable immutable releases.
 - Enable Dependabot, dependency review, secret scanning/push protection and
   private vulnerability reporting. Keep default workflow permissions read-only
@@ -23,7 +25,7 @@ before enabling publication.
 On the exact release commit:
 
 - Pass formatting, vet, unit/race/fuzz tests, security coverage, Staticcheck,
-  gosec, source/binary/tool govulncheck, actionlint, ShellCheck, C analysis and
+  gosec, runtime source/binary govulncheck, actionlint, ShellCheck, C analysis and
   sanitizers, OpenAPI and package lifecycle checks.
 - Pass `make verify-wireguard-sockets WIREGUARD_TEST_RUNNER=sudo` to verify
   unprivileged interface binding and rejection of plaintext fallback after
@@ -41,10 +43,11 @@ On the exact release commit:
 - Review dependencies, action/image pins, Swagger assets, licenses, notices,
   package contents and SBOMs. Check that docs, provisioning, configuration,
   OpenAPI, service units and SELinux policy agree.
-- Build Syft and Grype from `tools/sbom` with the pinned Go toolchain and pass
-  `make verify-sbom-tools`. Upstream release labels alone cannot verify their
-  Go runtime or transitive dependencies. Set Grype's target distribution
-  explicitly: extracted payloads lack OS-release metadata. Set Syft's
+- Build Syft and Grype from `tools/sbom` with the pinned Go toolchain using
+  `make sbom-tools`. Tool source/binary vulnerability audits run separately in
+  **Tooling maintenance** and do not gate publication; review their reports as
+  build-chain maintenance. Tool build or execution failures still block release.
+  Set Grype's target distribution explicitly: extracted payloads lack OS-release metadata. Set Syft's
   `--source-name` to `sha256:` plus the package archive's SHA-256, then scan that
   SBOM directly with Grype. Publication checks both reports for the same package
   identity to reject mixed evidence. This metadata relies on trusted CI; it

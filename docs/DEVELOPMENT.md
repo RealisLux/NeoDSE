@@ -49,7 +49,8 @@ make verify-native-sanitize BUILD_DIR=build/sanitized
 | --- | --- |
 | `make verify` | Module integrity, formatting, vet, Go/race, shell/workflow/package/OpenAPI contracts and JavaScript tests |
 | `make verify-release-tests` | Go JSON evidence; rejects missing prerequisites, truncated results and unexpected skips |
-| `make verify-security` | Staticcheck, gosec and source/binary vulnerability scans for runtime programs and pinned tools |
+| `make verify-security` | Staticcheck, gosec and source/binary vulnerability scans for NeoDSE runtime programs |
+| `make verify-tool-vulnerabilities` | Independent maintenance audit of pinned tool sources and binaries; reports in `build/tool-audit/` |
 | `make security-coverage` / `make fuzz-smoke` | Security coverage floors and parser/validation fuzz targets |
 | Native checks | GCC/Clang warnings, C formatting, parser, IPC and playlist tests, and ASan/UBSan |
 
@@ -147,7 +148,7 @@ or `.vulnerabilities.json` to the full package filename.
 To produce local SBOM and vulnerability evidence for a Debian 13 client package:
 
 ```bash
-make verify-sbom-tools
+make sbom-tools
 package=dist/NeoDSE-client_1.0.0_debian13_amd64.deb
 bash scripts/stage-package-sbom.sh build/package-sbom "${package}"
 read -r package_sha256 _ < <(sha256sum "${package}")
@@ -244,13 +245,30 @@ These tool graphs stay out of runtime programs and installed packages. Gosec's
 optional AI autofix is disabled.
 
 Release scanners are built from their pinned modules with the reviewed Go
-toolchain; no precompiled binaries are downloaded. Before they generate evidence,
-`make verify-sbom-tools` runs source-package and binary-symbol govulncheck on
-them. The source scan fails on any affected imported package, even without a
-reachable call, except the Docker SDK attribution errors in
-[SECURITY_EXCEPTIONS.md](SECURITY_EXCEPTIONS.md). Scanner and runtime binaries
-keep their symbol tables (runtime builds strip only DWARF data), so binary scans
-report precise symbols instead of whole modules.
+toolchain; no precompiled binaries are downloaded. `make sbom-tools` builds them
+without coupling publication to advisories in their dependency graphs. Scanner
+execution, SBOM coverage and high/critical package-payload findings remain
+mandatory release gates. Scanner and runtime binaries keep their symbol tables
+(runtime builds strip only DWARF data), so binary scans report precise symbols.
+
+The independent **Tooling maintenance** workflow runs on pull requests, tool
+changes on main/dev, a weekly schedule and manual dispatch. It checks tool module
+integrity and runs `make verify-tool-vulnerabilities`, retaining separate source
+and binary reports for 90 days even when findings fail the audit. Scanner source
+scans remain strict at package level, including the scoped Docker SDK assessment
+in [SECURITY_EXCEPTIONS.md](SECURITY_EXCEPTIONS.md). `make verify-sbom-tools`
+remains available for a scanner-only audit. No new exception is needed merely
+to unblock a product release.
+
+`make verify-go` verifies the runtime module. `make verify-tool-modules` verifies
+the four isolated tool modules; `make verify-modules` checks all five. Product
+checks still fail if a required validator cannot build or execute.
+
+Configure branch rules to require the CI product jobs, not `tool-audit` or
+`dependency-review` from Tooling maintenance. Release publication does not depend
+on that workflow. Its failures still need assessment: a build-tool vulnerability
+can affect CI or release integrity even when absent from installed packages.
+This policy accepts that risk separately from product vulnerability gates.
 
 Tool downloads, build caches and the Grype database need several gigabytes beyond
 runtime outputs. If the filesystem fills up, free space and rerun the affected
@@ -268,11 +286,13 @@ components in [SECURITY_EXCEPTIONS.md](SECURITY_EXCEPTIONS.md).
 
 Work on a maintenance branch. Update direct dependencies to their latest stable
 releases without `-u`; leave unrelated indirect dependencies unchanged. Review
-any indirect changes required by a direct update. Dependabot may also propose
-indirect updates; review those against the owning dependency's requirements and
-run the same validation. Keep transitive security updates enabled and resolve findings
-through a tested update of the owning dependency. CI and release builds use the
-committed versions.
+any indirect changes required by a direct update. For the runtime module,
+Dependabot continues weekly updates. For the tools, monthly grouped updates
+allow only the seven owning tool modules by name (Go may mark these `indirect`
+even though they are explicit `tool` commands). Update their transitive graphs
+through the owning tool; avoid `go get -u` and blanket overrides of indirect
+versions. Resolve tool findings through a tested upstream upgrade where possible.
+CI and release builds use the committed versions.
 
 1. **Update the five runtime modules**, from the repository root. Like Make and
    CI, set `GOTOOLCHAIN=local`: an update that needs a newer Go release then
@@ -323,6 +343,7 @@ go -C tools/sbom get github.com/anchore/syft@latest github.com/anchore/grype@lat
 go -C tools/sbom mod tidy
 git diff -- tools/*/go.mod tools/*/go.sum
 make verify-modules
+make verify-tool-vulnerabilities
 ```
 
 These are the tool modules listed below. Their entry modules may be marked
@@ -341,13 +362,28 @@ Do not update dependencies during release jobs.
 
 The reviewed Docker SDK exception applies only to the exact Docker and
 credential-helper versions it names, so a Grype update that keeps them passes
-unchanged. If an update changes them or adds findings, `make verify-security`
-and `make verify-sbom-tools` stop with `Affected scanner package`. Review the new
+unchanged. If an update changes them or adds findings, the independent
+`make verify-tool-vulnerabilities` and `make verify-sbom-tools` audits stop with
+`Affected scanner package`. Review the new
 findings against [the exception](SECURITY_EXCEPTIONS.md#go-2026-4883); if it
 still holds, update the versions together in that register,
 `scripts/check-scanner-vulnerabilities.py` and
 `internal/quality/scanner_evidence_test.go`. Otherwise, keep the previous tool
-versions.
+versions or document a separately reviewed tooling risk assessment.
+
+Dependabot update configuration does not disable dependency-graph alerts.
+The tool allow lists also restrict automatic security-update PRs to the named
+tools; transitive findings still appear as alerts and in the tooling audit.
+[GitHub documents these options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference).
+Do not disable repository-wide alerts or dismiss everything under `tools/`.
+For each alert, inspect its manifest path, the affected package and the actual
+command usage; a Docker daemon advisory in an optional scanner SDK is distinct
+from a vulnerability shipped in NeoDSE. Record scoped dismissals with the owning
+tool, evidence and a review trigger. Go module alerts cannot reliably distinguish
+development dependencies using `scope:development`, so use manifest paths.
+The all-manifest dependency review also lives in Tooling maintenance; its
+vulnerability and license findings are maintenance signals. Product vulnerability
+scans remain mandatory, and product license changes require manual review.
 
 ### Update Go
 

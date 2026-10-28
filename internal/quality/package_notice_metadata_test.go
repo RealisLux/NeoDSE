@@ -20,7 +20,7 @@ func TestPackagesRetainProjectNotice(t *testing.T) {
 	root := repositoryRoot(t)
 	nfpm := filepath.Join(root, "build", "tools", "nfpm")
 	if _, err := os.Stat(nfpm); err != nil {
-		t.Skip("build the pinned nFPM with make security-tools for package notice checks")
+		t.Skip("build the pinned nFPM with make packaging-tools for package notice checks")
 	}
 	expected, err := os.ReadFile(filepath.Join(root, "NOTICE"))
 	if err != nil {

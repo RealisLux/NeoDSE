@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # Runtime dependencies stay weekly. Tool upgrades follow upstream graphs;
+  # allow lists restrict update PRs, not dependency-graph vulnerability alerts.
   - package-ecosystem: gomod
     directory: /
     schedule: { interval: weekly }
@@ -7,17 +9,28 @@ updates:
       go-dependencies: { patterns: ['*'] }
   - package-ecosystem: gomod
     directory: /tools/analysis
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: github.com/rhysd/actionlint
+      - dependency-name: golang.org/x/vuln
+      - dependency-name: honnef.co/go/tools
     groups:
       analysis-tools: { patterns: ['*'] }
   - package-ecosystem: gomod
     directory: /tools/security
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: github.com/securego/gosec/v2
     groups:
       security-tools: { patterns: ['*'] }
   - package-ecosystem: gomod
     directory: /tools/packaging
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: github.com/goreleaser/nfpm/v2
     groups:
       packaging-tools: { patterns: ['*'] }
   - package-ecosystem: github-actions
@@ -25,6 +38,10 @@ updates:
     schedule: { interval: weekly }
   - package-ecosystem: gomod
     directory: /tools/sbom
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: github.com/anchore/syft
+      - dependency-name: github.com/anchore/grype
     groups:
       sbom-tools: { patterns: ['*'] }

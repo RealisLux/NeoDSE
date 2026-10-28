@@ -158,7 +158,7 @@ security-coverage:
 
 verify: verify-go verify-contracts verify-dashboard
 
-verify-go: verify-modules
+verify-go: verify-runtime-modules
 	test -z "$$(gofmt -l cmd internal tools)"
 	go vet ./...
 	go test ./...
@@ -175,25 +175,31 @@ verify-release-tests:
 		--allow-skip github.com/RealisLux/NeoDSE/internal/dashboard:TestDashboardBrowser \
 		--allow-skip github.com/RealisLux/NeoDSE/internal/server:TestFleetIntegration
 
-security-tools: sbom-tools
+.PHONY: analysis-tools packaging-tools
+analysis-tools:
 	mkdir -p "$(dir $(ACTIONLINT))"
-	go -C tools/analysis build -o "$(ACTIONLINT)" github.com/rhysd/actionlint/cmd/actionlint
-	go -C tools/analysis build -o "$(STATICCHECK)" honnef.co/go/tools/cmd/staticcheck
-	go -C tools/analysis build -o "$(GOVULNCHECK)" golang.org/x/vuln/cmd/govulncheck
-	go -C tools/security build -o "$(GOSEC)" github.com/securego/gosec/v2/cmd/gosec
-	go -C tools/packaging build -o "$(NFPM)" github.com/goreleaser/nfpm/v2/cmd/nfpm
+	go -C tools/analysis build -mod=readonly -o "$(ACTIONLINT)" github.com/rhysd/actionlint/cmd/actionlint
+	go -C tools/analysis build -mod=readonly -o "$(STATICCHECK)" honnef.co/go/tools/cmd/staticcheck
+	go -C tools/analysis build -mod=readonly -o "$(GOVULNCHECK)" golang.org/x/vuln/cmd/govulncheck
+
+packaging-tools:
+	mkdir -p "$(dir $(NFPM))"
+	go -C tools/packaging build -mod=readonly -o "$(NFPM)" github.com/goreleaser/nfpm/v2/cmd/nfpm
+
+security-tools: analysis-tools
+	go -C tools/security build -mod=readonly -o "$(GOSEC)" github.com/securego/gosec/v2/cmd/gosec
 
 .PHONY: sbom-tools verify-sbom-tools
 # Retain scanner symbols: stripped binaries lose precise govulncheck attribution.
 sbom-tools:
 	mkdir -p "$(dir $(SYFT))"
-	go -C tools/analysis build -o "$(GOVULNCHECK)" golang.org/x/vuln/cmd/govulncheck
 	version=$$(go -C tools/sbom list -m -f '{{.Version}}' github.com/anchore/syft); \
 		CGO_ENABLED=0 go -C tools/sbom build -mod=readonly -ldflags "-X main.version=$${version#v}" -o "$(SYFT)" github.com/anchore/syft/cmd/syft
 	version=$$(go -C tools/sbom list -m -f '{{.Version}}' github.com/anchore/grype); \
 		CGO_ENABLED=0 go -C tools/sbom build -mod=readonly -ldflags "-X main.version=$${version#v}" -o "$(GRYPE)" github.com/anchore/grype/cmd/grype
 
 verify-sbom-tools: sbom-tools
+	go -C tools/analysis build -mod=readonly -o "$(GOVULNCHECK)" golang.org/x/vuln/cmd/govulncheck
 	"$(GOVULNCHECK)" -scan=package -format=json -C tools/sbom github.com/anchore/syft/cmd/syft | python3 scripts/check-scanner-vulnerabilities.py --scanner syft
 	"$(GOVULNCHECK)" -scan=package -format=json -C tools/sbom github.com/anchore/grype/cmd/grype | python3 scripts/check-scanner-vulnerabilities.py --scanner grype
 	"$(GOVULNCHECK)" -mode=binary -format=json "$(SYFT)" | python3 scripts/check-scanner-vulnerabilities.py --scanner syft --mode binary
@@ -203,15 +209,11 @@ verify-security: security-tools build vnc-auth-helper
 	"$(STATICCHECK)" ./cmd/... ./internal/...
 	GOSEC_AI_API_KEY= GOSEC_AI_PROVIDER= GOSEC_AI_BASE_URL= "$(GOSEC)" ./cmd/... ./internal/...
 	"$(GOVULNCHECK)" ./...
-	bash scripts/check-tool-vulnerabilities.sh "$(GOVULNCHECK)"
 	@for binary in "$(BUILD_DIR)"/neodse-agent "$(BUILD_DIR)"/neodse-server \
 		"$(BUILD_DIR)"/neodse-transport "$(BUILD_DIR)"/neodse-proxy \
-		"$(BUILD_DIR)"/neodse-vnc-auth \
-		"$(ACTIONLINT)" "$(STATICCHECK)" "$(GOVULNCHECK)" "$(GOSEC)" "$(NFPM)"; do \
+		"$(BUILD_DIR)"/neodse-vnc-auth; do \
 		"$(GOVULNCHECK)" -mode=binary "$${binary}" || exit 1; \
 	done
-	"$(GOVULNCHECK)" -mode=binary -format=json "$(SYFT)" | python3 scripts/check-scanner-vulnerabilities.py --scanner syft --mode binary
-	"$(GOVULNCHECK)" -mode=binary -format=json "$(GRYPE)" | python3 scripts/check-scanner-vulnerabilities.py --scanner grype --mode binary
 
 fuzz-smoke:
 	go test ./internal/instruction -run '^$$' -fuzz FuzzDesiredStateValidation -fuzztime "$(FUZZ_TIME)"
@@ -237,14 +239,18 @@ verify-actions:
 	"$(ACTIONLINT)" -shellcheck shellcheck \
 		-ignore 'label "ubuntu-26\.04(-arm)?" is unknown'
 
-verify-tool-vulnerabilities:
-	mkdir -p "$(dir $(GOVULNCHECK))"
-	go -C tools/analysis build -o "$(GOVULNCHECK)" golang.org/x/vuln/cmd/govulncheck
-	bash scripts/check-tool-vulnerabilities.sh "$(GOVULNCHECK)"
+.PHONY: verify-runtime-modules verify-tool-modules
+# Tool advisories belong to the independent tooling workflow, not publication.
+verify-tool-vulnerabilities: security-tools packaging-tools sbom-tools
+	bash scripts/check-tool-vulnerabilities.sh "$(GOVULNCHECK)" "$(BUILD_DIR)/tool-audit"
 
-verify-modules:
+verify-modules: verify-runtime-modules verify-tool-modules
+
+verify-runtime-modules:
 	go mod verify
 	go mod tidy -diff
+
+verify-tool-modules:
 	@for module in tools/analysis tools/security tools/packaging tools/sbom; do \
 		(cd "$${module}" && go mod verify && go mod tidy -diff) || exit 1; \
 	done
