@@ -25,13 +25,24 @@ jobs:
           go-version: '1.27.3'
           check-latest: false
           cache: true
-          cache-dependency-path: |
-            go.sum
-            tools/*/go.sum
+          cache-dependency-path: go.sum
       - name: Verify modules and source
         run: make verify-go 2>&1 | tee go-verification.log
-      - name: Static and vulnerability analysis
-        run: make verify-security BUILD_DIR="${RUNNER_TEMP}/neodse-build" VERSION=1.0.0-ci 2>&1 | tee security.log
+      - name: Staticcheck and gosec
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+          args: ./cmd/... ./internal/...
+      - name: Scan Go source vulnerabilities
+        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+        with:
+          repo-checkout: false
+          go-version-input: '1.27.3'
+          check-latest: false
+          cache-dependency-path: go.sum
+          output-file: security.log
+      - name: Scan NeoDSE runtime binaries
+        run: make verify-binaries BUILD_DIR="${RUNNER_TEMP}/neodse-build" VERSION=1.0.0-ci 2>&1 | tee binary-security.log
       - name: Require complete unit test evidence
         run: |
           make packaging-tools
@@ -62,6 +73,7 @@ jobs:
             fleet-production.log
             go-verification.log
             security.log
+            binary-security.log
             fuzz.log
             build/release-review/unit-tests.jsonl
             build/fleet-tests.jsonl
@@ -82,9 +94,7 @@ jobs:
           go-version: stable
           check-latest: true
           cache: true
-          cache-dependency-path: |
-            go.sum
-            tools/*/go.sum
+          cache-dependency-path: go.sum
       - name: Test with current stable Go
         run: |
           go vet ./...
@@ -109,9 +119,7 @@ jobs:
           go-version: '1.27.3'
           check-latest: false
           cache: true
-          cache-dependency-path: |
-            go.sum
-            tools/*/go.sum
+          cache-dependency-path: go.sum
       - name: Install native validators
         run: |
           sudo apt-get update
@@ -121,8 +129,7 @@ jobs:
       - name: Test package metadata and SBOM staging
         if: matrix.compiler == 'gcc'
         run: |
-          mkdir -p build/tools
-          go -C tools/packaging build -o "${GITHUB_WORKSPACE}/build/tools/nfpm" github.com/goreleaser/nfpm/v2/cmd/nfpm
+          make packaging-tools
           go test -json -count=1 ./internal/quality -run '^(TestRPMStagingExtractsBuiltPackage|TestClientFilesArePackagedAsConfiguration)$' | \
             python3 scripts/check-test-results.py \
             --require-test github.com/RealisLux/NeoDSE/internal/quality:TestRPMStagingExtractsBuiltPackage \
@@ -169,3 +176,18 @@ jobs:
             build/dashboard-browser/
             build/dashboard-browser-tests.jsonl
           retention-days: 90
+
+  workflows:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Actionlint and embedded shell checks
+        uses: reviewdog/action-actionlint@cfa6a621f27735ccc88d35af9d0608692fd9b9f7 # v1.80.8
+        with:
+          reporter: local
+          filter_mode: nofilter
+          fail_level: any
+          actionlint_flags: '-ignore ''label "ubuntu-26\.04(-arm)?" is unknown'''

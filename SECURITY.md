@@ -42,12 +42,11 @@ checksums; public releases also provide build provenance attestations. SPDX SBOM
 and build-time vulnerability reports are checked before publication and kept as
 GitHub Actions artifacts for 90 days; access follows repository permissions.
 
-Build-tool dependencies are isolated from installed packages. Their vulnerability
-and all-manifest dependency/license reviews run in the independent Tooling
-maintenance workflow; findings remain visible and require assessment, but do not
-automatically block product releases. Runtime source/binary scans, package SBOM
-coverage and high/critical package findings remain publication gates. See the
-[tooling policy](docs/DEVELOPMENT.md#dependencies) for scope and branch-rule setup.
+Generic analysis uses maintained GitHub Actions; NeoDSE does not maintain the
+analyzers' dependency graphs. Dependabot follows NeoDSE dependencies and the
+Actions. Runtime source/binary scans, package SBOM coverage and high/critical
+package findings remain publication gates. See the
+[tooling policy](docs/DEVELOPMENT.md#dependencies) for configuration and updates.
 
 ## Secrets and rotation
 

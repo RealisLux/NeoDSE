@@ -193,17 +193,11 @@ jobs:
           done
       - name: Extract package payload for binary dependency discovery
         run: bash scripts/stage-package-sbom.sh build/package-sbom "dist/${{ steps.asset.outputs.name }}"
-      - name: Build pinned release scanners
-        run: make sbom-tools
-      - name: Generate package SBOM
+      - name: Select scan identity and target distribution
+        id: scan
         run: |
           read -r package_sha256 _ < <(sha256sum "dist/${{ steps.asset.outputs.name }}")
-          build/tools/syft scan dir:build/package-sbom --source-name "sha256:${package_sha256}" \
-            -o "spdx-json=dist/${{ steps.asset.outputs.name }}.spdx.json"
-      - name: Verify SBOM covers embedded Go dependencies
-        run: python3 scripts/check-package-sbom.py build/package-sbom "dist/${{ steps.asset.outputs.name }}.spdx.json"
-      - name: Scan package SBOM for high-severity vulnerabilities
-        run: |
+          echo "identity=sha256:${package_sha256}" >> "${GITHUB_OUTPUT}"
           case "${{ matrix.target }}" in
             debian13) distro=debian:13 ;;
             ubuntu26.04) distro=ubuntu:26.04 ;;
@@ -211,9 +205,33 @@ jobs:
             el10) distro=rocky:10 ;;
             *) echo 'Unsupported scanner distribution' >&2; exit 1 ;;
           esac
-          build/tools/grype "sbom:dist/${{ steps.asset.outputs.name }}.spdx.json" \
-            --distro "${distro}" --fail-on high --output json \
-            --file "dist/${{ steps.asset.outputs.name }}.vulnerabilities.json"
+          echo "distro=${distro}" >> "${GITHUB_OUTPUT}"
+      - name: Generate package SBOM
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        env:
+          SYFT_SOURCE_NAME: ${{ steps.scan.outputs.identity }}
+        with:
+          path: build/package-sbom
+          syft-version: v1.55.0
+          format: spdx-json
+          output-file: dist/${{ steps.asset.outputs.name }}.spdx.json
+          dependency-snapshot: false
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Verify SBOM covers embedded Go dependencies
+        run: python3 scripts/check-package-sbom.py build/package-sbom "dist/${{ steps.asset.outputs.name }}.spdx.json"
+      - name: Scan package SBOM for high-severity vulnerabilities
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        env:
+          GRYPE_DISTRO: ${{ steps.scan.outputs.distro }}
+        with:
+          sbom: dist/${{ steps.asset.outputs.name }}.spdx.json
+          grype-version: v0.121.0
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: false
+          output-format: json
+          output-file: dist/${{ steps.asset.outputs.name }}.vulnerabilities.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

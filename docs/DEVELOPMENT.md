@@ -32,6 +32,16 @@ sudo apt-get install --yes --no-install-recommends \
 
 ## Build and test
 
+CI runs the publishers' Actions for Go linting, vulnerability scanning, workflow
+linting and package SBOMs. For the corresponding local checks, install
+`golangci-lint` (the version in `quality.yml`), `govulncheck` and `actionlint` on
+`PATH`; Make does not download or rebuild analyzers. For example, Go's
+`go install golang.org/x/vuln/cmd/govulncheck@latest` and
+`go install github.com/rhysd/actionlint/cmd/actionlint@latest` install the commands
+without changing NeoDSE's module. Follow the
+[golangci-lint installation guide](https://golangci-lint.run/docs/welcome/install/)
+for that command.
+
 From the repository root:
 
 ```bash
@@ -49,8 +59,8 @@ make verify-native-sanitize BUILD_DIR=build/sanitized
 | --- | --- |
 | `make verify` | Module integrity, formatting, vet, Go/race, shell/workflow/package/OpenAPI contracts and JavaScript tests |
 | `make verify-release-tests` | Go JSON evidence; rejects missing prerequisites, truncated results and unexpected skips |
-| `make verify-security` | Staticcheck, gosec and source/binary vulnerability scans for NeoDSE runtime programs |
-| `make verify-tool-vulnerabilities` | Independent maintenance audit of pinned tool sources and binaries; reports in `build/tool-audit/` |
+| `make verify-security` | Locally installed golangci-lint (Staticcheck, unused and gosec), govulncheck source scans and scans of all five runtime binaries |
+| `make verify-binaries` | Build and vulnerability-scan all five runtime binaries using govulncheck on PATH |
 | `make security-coverage` / `make fuzz-smoke` | Security coverage floors and parser/validation fuzz targets |
 | Native checks | GCC/Clang warnings, C formatting, parser, IPC and playlist tests, and ASan/UBSan |
 
@@ -148,14 +158,14 @@ or `.vulnerabilities.json` to the full package filename.
 To produce local SBOM and vulnerability evidence for a Debian 13 client package:
 
 ```bash
-make sbom-tools
+# Install syft and grype using their upstream instructions first.
 package=dist/NeoDSE-client_1.0.0_debian13_amd64.deb
 bash scripts/stage-package-sbom.sh build/package-sbom "${package}"
 read -r package_sha256 _ < <(sha256sum "${package}")
-build/tools/syft scan dir:build/package-sbom --source-name "sha256:${package_sha256}" \
+syft scan dir:build/package-sbom --source-name "sha256:${package_sha256}" \
   -o "spdx-json=${package}.spdx.json"
 python3 scripts/check-package-sbom.py build/package-sbom "${package}.spdx.json"
-build/tools/grype "sbom:${package}.spdx.json" --distro debian:13 \
+grype "sbom:${package}.spdx.json" --distro debian:13 \
   --fail-on high --output json --file "${package}.vulnerabilities.json"
 ```
 
@@ -239,60 +249,59 @@ directory entries and reports failures.
 
 GTK, WebKitGTK, JSON-GLib, Weston, ALSA, WireGuard, systemd and SELinux are
 distribution dependencies. HDMI-CEC uses the kernel ABI directly.
-`tools/analysis` pins Actionlint, Staticcheck and govulncheck; `tools/security`
-pins gosec; `tools/packaging` pins nFPM; `tools/sbom` pins Syft and Grype.
-These tool graphs stay out of runtime programs and installed packages. Gosec's
-optional AI autofix is disabled.
+Generic checks use maintained Actions:
 
-Release scanners are built from their pinned modules with the reviewed Go
-toolchain; no precompiled binaries are downloaded. `make sbom-tools` builds them
-without coupling publication to advisories in their dependency graphs. Scanner
-execution, SBOM coverage and high/critical package-payload findings remain
-mandatory release gates. Scanner and runtime binaries keep their symbol tables
-(runtime builds strip only DWARF data), so binary scans report precise symbols.
+| Check | Integration |
+| --- | --- |
+| Staticcheck, unused code and gosec | `golangci/golangci-lint-action`, configured in `.golangci.yml` |
+| Go source vulnerabilities | `golang/govulncheck-action` |
+| Workflow and embedded shell validation | `reviewdog/action-actionlint`, with local reporting, no diff filtering and failure on findings |
+| Package SPDX generation | `anchore/sbom-action` |
+| Package vulnerability scanning | `anchore/scan-action` |
 
-The independent **Tooling maintenance** workflow runs on pull requests, tool
-changes on main/dev, a weekly schedule and manual dispatch. It checks tool module
-integrity and runs `make verify-tool-vulnerabilities`, retaining separate source
-and binary reports for 90 days even when findings fail the audit. Scanner source
-scans remain strict at package level, including the scoped Docker SDK assessment
-in [SECURITY_EXCEPTIONS.md](SECURITY_EXCEPTIONS.md). `make verify-sbom-tools`
-remains available for a scanner-only audit. No new exception is needed merely
-to unblock a product release.
+The Actions manage analyzer installation. Their Go dependency graphs are not
+NeoDSE manifests and are not maintained in this repository. The Go source
+Action currently installs the latest govulncheck itself; pinning that Action's
+commit does not freeze that executable. It analyzes NeoDSE's source, then the
+same installed govulncheck scans the five built runtime binaries. Runtime builds
+retain symbols for precise attribution. `.golangci.yml` preserves Staticcheck
+and production-only gosec analysis; it does not enable unrelated linter presets.
 
-`make verify-go` verifies the runtime module. `make verify-tool-modules` verifies
-the four isolated tool modules; `make verify-modules` checks all five. Product
-checks still fail if a required validator cannot build or execute.
+Release scanner versions are explicit inputs to their Actions. Keep package
+identity (`SYFT_SOURCE_NAME`), target distribution (`GRYPE_DISTRO`), all fix
+states and the high-severity failure threshold when changing these steps.
+Disable the SBOM Action's automatic uploads and dependency submission: the
+existing package artifact and publication jobs own evidence and publication.
+SBOM coverage and the publication validator remain mandatory, including checks
+of ignored high/critical findings, scanner configuration and database freshness.
 
-Configure branch rules to require the CI product jobs, not `tool-audit` or
-`dependency-review` from Tooling maintenance. Release publication does not depend
-on that workflow. Its failures still need assessment: a build-tool vulnerability
-can affect CI or release integrity even when absent from installed packages.
-This policy accepts that risk separately from product vulnerability gates.
+`make packaging-tools` installs the upstream nFPM version named by `NFPM_VERSION`
+in Makefile using versioned `go install`. It does not add dependencies to NeoDSE
+or override nFPM's transitive versions. The native package builder calls this
+target and continues to build payloads and SELinux policy on the target OS.
 
-Tool downloads, build caches and the Grype database need several gigabytes beyond
-runtime outputs. If the filesystem fills up, free space and rerun the affected
-gate; a partial test or scan does not count as a pass. `go clean -cache` removes
-regenerable Go build data.
+Dependabot follows the root Go module and GitHub Actions weekly. With the four
+tool modules removed, there are no tool manifests to produce Docker SDK alerts
+in this repository. This does not remove vulnerabilities from the tools: review
+upstream advisories and update the corresponding Action or tool version.
+Dependency review runs in CI for eligible public pull requests; private personal
+repositories skip that API check. Require the CI quality jobs (including workflow
+validation) and dependency review where available. There is no separate tooling
+audit workflow to require or maintain.
 
 Swagger UI 5.33.3 is vendored with licenses, provenance and checksums in
 [its vendor record](../internal/swagger/vendor/README.md).
 Before adding a dependency, check its maintenance, license, vulnerabilities and
 transitive modules, and explain why existing code or libraries are insufficient.
-Record analyzer exceptions and accepted advisories for build tools or vendored
+Record analyzer exceptions and accepted advisories for runtime or vendored
 components in [SECURITY_EXCEPTIONS.md](SECURITY_EXCEPTIONS.md).
 
 ### Update Go dependencies
 
 Work on a maintenance branch. Update direct dependencies to their latest stable
 releases without `-u`; leave unrelated indirect dependencies unchanged. Review
-any indirect changes required by a direct update. For the runtime module,
-Dependabot continues weekly updates. For the tools, monthly grouped updates
-allow only the seven owning tool modules by name (Go may mark these `indirect`
-even though they are explicit `tool` commands). Update their transitive graphs
-through the owning tool; avoid `go get -u` and blanket overrides of indirect
-versions. Resolve tool findings through a tested upstream upgrade where possible.
-CI and release builds use the committed versions.
+any indirect changes required by a direct update. Dependabot continues weekly
+runtime updates; CI and release builds use the committed versions.
 
 1. **Update the five runtime modules**, from the repository root. Like Make and
    CI, set `GOTOOLCHAIN=local`: an update that needs a newer Go release then
@@ -327,80 +336,34 @@ evidence. An update may require a newer Go compiler or source changes.
 
 ### Update development tools
 
-From the repository root, update all seven tools in their own modules, then tidy
-and review the module files. `GOTOOLCHAIN=local` has the same purpose as above:
+Review Dependabot's Action updates in `.github/workflows/`; keep every `uses`
+reference pinned to a full commit. Review the publisher's changes and rerun CI.
+For golangci-lint, Syft and Grype, review the explicit executable version inputs
+in `quality.yml` and `release.yml` as well. Update nFPM's single `NFPM_VERSION`
+in Makefile and validate packages with `make packaging-tools` and the native
+package tests. No tool `go.mod` or `go.sum` needs a separate update.
 
-```bash
-export GOTOOLCHAIN=local
-go -C tools/analysis get github.com/rhysd/actionlint@latest \
-  golang.org/x/vuln@latest honnef.co/go/tools@latest
-go -C tools/analysis mod tidy
-go -C tools/security get github.com/securego/gosec/v2@latest
-go -C tools/security mod tidy
-go -C tools/packaging get github.com/goreleaser/nfpm/v2@latest
-go -C tools/packaging mod tidy
-go -C tools/sbom get github.com/anchore/syft@latest github.com/anchore/grype@latest
-go -C tools/sbom mod tidy
-git diff -- tools/*/go.mod tools/*/go.sum
-make verify-modules
-make verify-tool-vulnerabilities
-```
+Do not work around a tool's dependency constraints by overriding its indirect
+modules. Update the owning tool or Action. The source govulncheck Action follows
+the publisher's installation policy; the local command can be installed via
+versioned `go install` when reproducing an analysis.
 
-These are the tool modules listed below. Their entry modules may be marked
-`// indirect` because Go records the executable packages with `tool`
-directives; these are still the tools the project explicitly uses.
-
-| Directory | Modules to update |
-| --- | --- |
-| `tools/analysis` | `github.com/rhysd/actionlint`, `golang.org/x/vuln`, `honnef.co/go/tools` |
-| `tools/security` | `github.com/securego/gosec/v2` |
-| `tools/packaging` | `github.com/goreleaser/nfpm/v2` |
-| `tools/sbom` | `github.com/anchore/syft`, `github.com/anchore/grype` |
-
-Apply the same stable-release, indirect-dependency and validation rules as above.
-Do not update dependencies during release jobs.
-
-The reviewed Docker SDK exception applies only to the exact Docker and
-credential-helper versions it names, so a Grype update that keeps them passes
-unchanged. If an update changes them or adds findings, the independent
-`make verify-tool-vulnerabilities` and `make verify-sbom-tools` audits stop with
-`Affected scanner package`. Review the new
-findings against [the exception](SECURITY_EXCEPTIONS.md#go-2026-4883); if it
-still holds, update the versions together in that register,
-`scripts/check-scanner-vulnerabilities.py` and
-`internal/quality/scanner_evidence_test.go`. Otherwise, keep the previous tool
-versions or document a separately reviewed tooling risk assessment.
-
-Dependabot update configuration does not disable dependency-graph alerts.
-The tool allow lists also restrict automatic security-update PRs to the named
-tools; transitive findings still appear as alerts and in the tooling audit.
-[GitHub documents these options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference).
-Do not disable repository-wide alerts or dismiss everything under `tools/`.
-For each alert, inspect its manifest path, the affected package and the actual
-command usage; a Docker daemon advisory in an optional scanner SDK is distinct
-from a vulnerability shipped in NeoDSE. Record scoped dismissals with the owning
-tool, evidence and a review trigger. Go module alerts cannot reliably distinguish
-development dependencies using `scope:development`, so use manifest paths.
-The all-manifest dependency review also lives in Tooling maintenance; its
-vulnerability and license findings are maintenance signals. Product vulnerability
-scans remain mandatory, and product license changes require manual review.
+Run `make verify`, the analyzer Actions, runtime binary scans and the affected
+native/package checks before merging. Local `make verify-security` uses the same
+linter configuration and existing executables on PATH.
 
 ### Update Go
 
 Install the reviewed stable Go release and confirm `GOTOOLCHAIN=local go version`.
-Set that version in all five module files:
+Set that version in the runtime module:
 
 ```bash
 version=1.27.3 # replace with the reviewed release
 go mod edit -go="${version}"
-go -C tools/analysis mod edit -go="${version}"
-go -C tools/security mod edit -go="${version}"
-go -C tools/packaging mod edit -go="${version}"
-go -C tools/sbom mod edit -go="${version}"
 ```
 
-Update the version in this guide and every exact `go-version` passed to
-`actions/setup-go` in the CI, quality, CodeQL and release workflows;
+Update the version in this guide and every exact `go-version` and `go-version-input` passed to
+`actions/setup-go` and `golang/govulncheck-action` in the CI, quality, CodeQL and release workflows;
 `git grep -n "go-version: '" .github/workflows` lists them. Then run the
 validation gates above. Leave the forward-compatibility job on `stable`: it
 tests committed dependencies with current stable Go, without upgrading them or

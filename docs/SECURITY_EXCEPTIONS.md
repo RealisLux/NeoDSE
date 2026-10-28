@@ -58,28 +58,16 @@ advisory scope changes.
 - Rationale: SQLite policy authorization occurs before forwarding. The custom transport resolves once, rejects every prohibited address, and dials the approved IP directly, preventing DNS rebinding between validation and connection.
 - Regression evidence: `TestSafeDialRejectsLocalAndMalformedDestinations`, `TestAuthorizeFailsClosedOnInvalidBackendResponses`, and `TestHTTPRedirectIsReturnedToClient`.
 
-## Build-tool advisories
+## Runtime module advisories
 
 ### GO-2026-5932
 
 - Advisory: [Go vulnerability database](https://pkg.go.dev/vuln/GO-2026-5932).
-- Scope: the isolated `tools/security`, `tools/packaging` and `tools/sbom` graphs require `golang.org/x/crypto v0.57.0`. The runtime module requires `golang.org/x/crypto v0.58.0` for the `xts` and `argon2` packages of database encryption. The deprecated `openpgp` package has no fixed version.
-- Reachability evidence: source `govulncheck` scans of the root module and of the pinned `gosec`, `nfpm`, `syft` and `grype` commands report zero affected imported packages for this advisory. Binary symbol scans also report no affected symbols. The affected `openpgp` package is not linked into any NeoDSE runtime binary or installed package; runtime binaries keep their symbol table so binary scans can show this.
-- Decision: retain the dependency while the advisory remains module-only and unreachable. A reachable runtime finding blocks publication; a tool finding fails the independent tooling audit.
-- Review triggers: changes to `gosec`, `nfpm`, `syft`, `grype`, `github.com/ncruces/go-sqlite3`, `golang.org/x/crypto`, runtime linker flags or the advisory's affected-package scope.
-- Removal condition: remove this entry when neither the tool graphs nor the runtime module require the affected module, or a maintained replacement eliminates the advisory.
-
-### GO-2026-4883
-
-Shared assessment of Docker daemon advisories in Grype's SDK dependency.
-
-- Advisories: [GO-2026-4883](https://pkg.go.dev/vuln/GO-2026-4883), [GO-2026-4887](https://pkg.go.dev/vuln/GO-2026-4887), [GO-2026-5617](https://pkg.go.dev/vuln/GO-2026-5617), [GO-2026-5668](https://pkg.go.dev/vuln/GO-2026-5668), and [GO-2026-5746](https://pkg.go.dev/vuln/GO-2026-5746).
-- Scope: Grype in `tools/sbom` imports the legacy Docker `v28.5.2+incompatible` client and API types for optional local-image completion, plus Docker credential helpers `v0.9.8`. It does not import Docker daemon or plugin-execution code.
-- Rationale: the first two unreviewed Go records omit affected-package metadata and attribute daemon plugin flaws to every SDK package. The upstream advisories describe [daemon plugin privilege validation](https://github.com/moby/moby/security/advisories/GHSA-pxq6-2prw-chj9) and [daemon authorization plugins](https://github.com/moby/moby/security/advisories/GHSA-x744-4wpc-v9h2). The other three findings concern daemon archive/copy code and remain module-only. No Docker dependency enters NeoDSE runtime packages.
-- Decision: the validator accepts only the first two IDs, only in Grype scans, only for this exact Docker version, only for `client`, `api`, `api/types` and its children, and only while the advisory's affected-package metadata remains empty. Binary mode additionally accepts their attribution to the exact credential-helper version's `client` and `credentials` packages. Daemon packages, changed Docker or helper versions, changed scope and unrelated findings all fail closed in both source-package and binary-symbol scans. The assessment concerns the Docker SDK, so a Grype update that keeps these versions and this scope needs no change here. Scanner builds retain symbols so binary scans do not fall back to module-only attribution. These exceptions do not apply to package-payload Grype reports or any NeoDSE runtime scan.
-- Regression evidence: scanner-evidence tests exercise unexpected advisories, daemon imports, version/scope changes and malformed evidence. Actual source-package and binary scans run in the independent tooling audit and via `make verify-sbom-tools`; they do not gate publication.
-- Review triggers: changes to Grype's Docker dependency, Docker, Docker credential helpers, govulncheck or the advisory's affected-package scope.
-- Removal condition: remove these exceptions when Grype migrates completion to the maintained Moby SDK or the Go advisory records gain accurate package scope.
+- Scope: NeoDSE requires `golang.org/x/crypto v0.58.0` for database encryption's `xts` and `argon2` packages. The advisory concerns the deprecated `openpgp` package, which has no fixed version.
+- Reachability evidence: source and runtime binary scans report no affected imported packages or symbols; NeoDSE does not import or link `openpgp`.
+- Decision: retain the dependency while the advisory remains module-only. A reachable runtime finding blocks publication. This adds no scanner suppression.
+- Review triggers: changes to `github.com/ncruces/go-sqlite3`, `golang.org/x/crypto`, runtime linker flags or the advisory's affected-package scope.
+- Removal condition: remove this entry when the runtime module no longer requires an affected module version or a maintained replacement eliminates the advisory.
 
 ## Vendored component advisories
 

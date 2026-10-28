@@ -300,8 +300,7 @@ main() {
         validate_rpm_build_host
     fi
 
-    mkdir -p "$(dirname "$NFPM_BINARY")"
-    go -C tools/packaging build -o "$NFPM_BINARY" github.com/goreleaser/nfpm/v2/cmd/nfpm
+    make packaging-tools BUILD_DIR=build
 
     mkdir -p dist
     if [[ "$RUN_TESTS" == true ]]; then

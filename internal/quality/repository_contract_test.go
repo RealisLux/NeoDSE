@@ -25,7 +25,7 @@ var suppressionHeadingPattern = regexp.MustCompile(`(?m)^### (EXC-[A-Z0-9-]+)$`)
 // TestGoFilesUseCanonicalHeader enforces file provenance and purpose headers.
 func TestGoFilesUseCanonicalHeader(t *testing.T) {
 	root := repositoryRoot(t)
-	for _, directory := range []string{"cmd", "internal", "tools"} {
+	for _, directory := range []string{"cmd", "internal"} {
 		err := filepath.WalkDir(filepath.Join(root, directory), func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
@@ -349,8 +349,8 @@ func TestReleaseWorkflowPreservesTargetAndPublicationContract(t *testing.T) {
 		"uses: ./.github/workflows/codeql.yml", "needs.codeql.result == 'success'",
 		`git rev-parse --verify "${GITHUB_REF}^{commit}"`,
 		`release_branch=dev`, `refs/remotes/origin/${release_branch}^{commit}`, `.verification.verified == true`, "bash scripts/publish-release.sh",
-		"pattern: package-*", "spdx-json=", "--source-name", "--fail-on high",
-		"--output json", ".vulnerabilities.json", "actions/attest-build-provenance@",
+		"pattern: package-*", "format: spdx-json", "SYFT_SOURCE_NAME", "severity-cutoff: high",
+		"output-format: json", ".vulnerabilities.json", "actions/attest-build-provenance@",
 		"SHA256SUMS",
 	} {
 		if !strings.Contains(text, required) {
@@ -364,61 +364,6 @@ func TestReleaseWorkflowPreservesTargetAndPublicationContract(t *testing.T) {
 	}
 	requireFileText(t, root, ".github/workflows/codeql.yml", "workflow_call:")
 	requireFileText(t, root, ".github/workflows/codeql.yml", "if: github.event.repository.private == false")
-}
-
-// TestReleaseScannerVersionsArePinned requires source-built scanners from the
-// committed graph, with tool vulnerability auditing independent of publication.
-func TestReleaseScannerVersionsArePinned(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(repositoryRoot(t), ".github", "workflows", "release.yml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var workflow struct {
-		Jobs map[string]struct {
-			Steps []struct {
-				Uses string `yaml:"uses"`
-				Run  string `yaml:"run"`
-			} `yaml:"steps"`
-		} `yaml:"jobs"`
-	}
-	if err := yaml.Unmarshal(source, &workflow); err != nil {
-		t.Fatal(err)
-	}
-	for _, job := range []string{"packages"} {
-		built := false
-		generated := false
-		details := workflow.Jobs[job]
-		for _, step := range details.Steps {
-			if strings.HasPrefix(step.Uses, "anchore/") {
-				t.Errorf("%s: downloaded scanner bypasses the pinned module graph", job)
-			}
-			if strings.Contains(step.Run, "make sbom-tools") {
-				built = true
-			}
-			if strings.Contains(step.Run, "verify-sbom-tools") || strings.Contains(step.Run, "verify-tool-vulnerabilities") {
-				t.Errorf("%s: tool advisories must be audited independently of publication", job)
-			}
-			if strings.Contains(step.Run, "build/tools/syft scan") {
-				generated = true
-				if !built {
-					t.Errorf("%s: SBOM generation precedes the pinned scanner build", job)
-				}
-			}
-		}
-		if !built || !generated {
-			t.Errorf("%s: source-built scanners and SBOM generation are required", job)
-		}
-	}
-	module, err := os.ReadFile(filepath.Join(repositoryRoot(t), "tools", "sbom", "go.mod"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, tool := range []string{"syft", "grype"} {
-		pin := regexp.MustCompile(`(?m)^\s*github.com/anchore/` + tool + ` v[0-9]+\.[0-9]+\.[0-9]+(?: // indirect)?$`)
-		if len(pin.FindAll(module, -1)) != 1 {
-			t.Errorf("%s requires one explicit stable module version", tool)
-		}
-	}
 }
 
 // TestPackagedServicesAreIPv4Only prevents configuration and sandbox policy from diverging.

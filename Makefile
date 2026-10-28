@@ -15,13 +15,12 @@ FORMAT ?= auto
 SELINUX_DEVEL ?= /usr/share/selinux/devel
 SANITIZER_OPTIONS ?= detect_leaks=1:halt_on_error=1
 UNDEFINED_SANITIZER_OPTIONS ?= halt_on_error=1
-ACTIONLINT := $(abspath $(BUILD_DIR)/tools/actionlint)
-GOVULNCHECK := $(abspath $(BUILD_DIR)/tools/govulncheck)
-STATICCHECK := $(abspath $(BUILD_DIR)/tools/staticcheck)
-GOSEC := $(abspath $(BUILD_DIR)/tools/gosec)
+# Local checks use tools installed on PATH; CI uses maintained Actions.
+ACTIONLINT ?= actionlint
+GOLANGCI_LINT ?= golangci-lint
+GOVULNCHECK ?= govulncheck
+NFPM_VERSION := v2.48.0
 NFPM := $(abspath $(BUILD_DIR)/tools/nfpm)
-SYFT := $(abspath $(BUILD_DIR)/tools/syft)
-GRYPE := $(abspath $(BUILD_DIR)/tools/grype)
 FUZZ_TIME ?= 15s
 NODE ?= node
 CLANG_FORMAT ?= clang-format-19
@@ -46,7 +45,7 @@ UI_LDFLAGS := -pie -Wl,-z,relro,-z,now
 # diagnostic in both GCC and Clang but is outside this project's control.
 system_cflags = $$(pkg-config --cflags $(1) | sed -E 's@(^|[[:space:]])-I@\1-isystem @g')
 
-.PHONY: all build agent server transport proxy ui vnc-auth-helper ui-test ui-test-sanitize ui-sanitize test security-coverage verify verify-go verify-security security-tools fuzz-smoke verify-native verify-native-sanitize verify-contracts verify-actions verify-modules verify-tool-vulnerabilities verify-packaging selinux-policy package-local clean
+.PHONY: all build agent server transport proxy ui vnc-auth-helper ui-test ui-test-sanitize ui-sanitize test security-coverage verify verify-go verify-security verify-binaries packaging-tools fuzz-smoke verify-native verify-native-sanitize verify-contracts verify-actions verify-modules verify-packaging selinux-policy package-local clean
 
 all: build ui vnc-auth-helper
 
@@ -156,10 +155,10 @@ test:
 security-coverage:
 	bash scripts/check-security-coverage.sh
 
-verify: verify-go verify-contracts verify-dashboard
+verify: verify-go verify-contracts verify-dashboard verify-actions
 
-verify-go: verify-runtime-modules
-	test -z "$$(gofmt -l cmd internal tools)"
+verify-go: verify-modules
+	test -z "$$(gofmt -l cmd internal)"
 	go vet ./...
 	go test ./...
 	go test -race ./...
@@ -175,40 +174,20 @@ verify-release-tests:
 		--allow-skip github.com/RealisLux/NeoDSE/internal/dashboard:TestDashboardBrowser \
 		--allow-skip github.com/RealisLux/NeoDSE/internal/server:TestFleetIntegration
 
-.PHONY: analysis-tools packaging-tools
-analysis-tools:
-	mkdir -p "$(dir $(ACTIONLINT))"
-	go -C tools/analysis build -mod=readonly -o "$(ACTIONLINT)" github.com/rhysd/actionlint/cmd/actionlint
-	go -C tools/analysis build -mod=readonly -o "$(STATICCHECK)" honnef.co/go/tools/cmd/staticcheck
-	go -C tools/analysis build -mod=readonly -o "$(GOVULNCHECK)" golang.org/x/vuln/cmd/govulncheck
-
+# nFPM is a packaging command, not a NeoDSE module dependency. Install the
+# upstream version without maintaining its transitive module graph here.
 packaging-tools:
 	mkdir -p "$(dir $(NFPM))"
-	go -C tools/packaging build -mod=readonly -o "$(NFPM)" github.com/goreleaser/nfpm/v2/cmd/nfpm
+	GOBIN="$(dir $(NFPM))" go install github.com/goreleaser/nfpm/v2/cmd/nfpm@$(NFPM_VERSION)
 
-security-tools: analysis-tools
-	go -C tools/security build -mod=readonly -o "$(GOSEC)" github.com/securego/gosec/v2/cmd/gosec
-
-.PHONY: sbom-tools verify-sbom-tools
-# Retain scanner symbols: stripped binaries lose precise govulncheck attribution.
-sbom-tools:
-	mkdir -p "$(dir $(SYFT))"
-	version=$$(go -C tools/sbom list -m -f '{{.Version}}' github.com/anchore/syft); \
-		CGO_ENABLED=0 go -C tools/sbom build -mod=readonly -ldflags "-X main.version=$${version#v}" -o "$(SYFT)" github.com/anchore/syft/cmd/syft
-	version=$$(go -C tools/sbom list -m -f '{{.Version}}' github.com/anchore/grype); \
-		CGO_ENABLED=0 go -C tools/sbom build -mod=readonly -ldflags "-X main.version=$${version#v}" -o "$(GRYPE)" github.com/anchore/grype/cmd/grype
-
-verify-sbom-tools: sbom-tools
-	go -C tools/analysis build -mod=readonly -o "$(GOVULNCHECK)" golang.org/x/vuln/cmd/govulncheck
-	"$(GOVULNCHECK)" -scan=package -format=json -C tools/sbom github.com/anchore/syft/cmd/syft | python3 scripts/check-scanner-vulnerabilities.py --scanner syft
-	"$(GOVULNCHECK)" -scan=package -format=json -C tools/sbom github.com/anchore/grype/cmd/grype | python3 scripts/check-scanner-vulnerabilities.py --scanner grype
-	"$(GOVULNCHECK)" -mode=binary -format=json "$(SYFT)" | python3 scripts/check-scanner-vulnerabilities.py --scanner syft --mode binary
-	"$(GOVULNCHECK)" -mode=binary -format=json "$(GRYPE)" | python3 scripts/check-scanner-vulnerabilities.py --scanner grype --mode binary
-
-verify-security: security-tools build vnc-auth-helper
-	"$(STATICCHECK)" ./cmd/... ./internal/...
-	GOSEC_AI_API_KEY= GOSEC_AI_PROVIDER= GOSEC_AI_BASE_URL= "$(GOSEC)" ./cmd/... ./internal/...
+# Convenience checks for developers with the analyzers installed locally.
+# GitHub Actions runs the publishers' integrations for these checks.
+verify-security:
+	"$(GOLANGCI_LINT)" run ./cmd/... ./internal/...
 	"$(GOVULNCHECK)" ./...
+	$(MAKE) verify-binaries
+
+verify-binaries: build vnc-auth-helper
 	@for binary in "$(BUILD_DIR)"/neodse-agent "$(BUILD_DIR)"/neodse-server \
 		"$(BUILD_DIR)"/neodse-transport "$(BUILD_DIR)"/neodse-proxy \
 		"$(BUILD_DIR)"/neodse-vnc-auth; do \
@@ -227,33 +206,19 @@ verify-native: build ui vnc-auth-helper ui-test
 
 verify-native-sanitize: ui-test-sanitize ui-sanitize
 
-verify-contracts: verify-actions verify-packaging
+verify-contracts: verify-packaging
 	@for script in scripts/*.sh; do bash -n "$${script}" || exit 1; done
 	shellcheck -x scripts/*.sh
 	cd internal/swagger/vendor && sha256sum --check MANIFEST.sha256
 	go test -count=1 ./internal/config ./internal/swagger ./internal/quality
 
 verify-actions:
-	mkdir -p "$(dir $(ACTIONLINT))"
-	go -C tools/analysis build -o "$(ACTIONLINT)" github.com/rhysd/actionlint/cmd/actionlint
 	"$(ACTIONLINT)" -shellcheck shellcheck \
 		-ignore 'label "ubuntu-26\.04(-arm)?" is unknown'
 
-.PHONY: verify-runtime-modules verify-tool-modules
-# Tool advisories belong to the independent tooling workflow, not publication.
-verify-tool-vulnerabilities: security-tools packaging-tools sbom-tools
-	bash scripts/check-tool-vulnerabilities.sh "$(GOVULNCHECK)" "$(BUILD_DIR)/tool-audit"
-
-verify-modules: verify-runtime-modules verify-tool-modules
-
-verify-runtime-modules:
+verify-modules:
 	go mod verify
 	go mod tidy -diff
-
-verify-tool-modules:
-	@for module in tools/analysis tools/security tools/packaging tools/sbom; do \
-		(cd "$${module}" && go mod verify && go mod tidy -diff) || exit 1; \
-	done
 
 verify-packaging:
 	@if grep -REn '^[[:space:]]*(bindir|dependencies):' packaging/*.yaml; then \

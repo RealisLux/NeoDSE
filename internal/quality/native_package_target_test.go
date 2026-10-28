@@ -84,9 +84,12 @@ func TestNativePackageRebuildsManifestPayload(t *testing.T) {
 				"scripts/build-local-packages.sh": script,
 				"os-release":                      "ID=debian\nVERSION_ID=13\n",
 				"Makefile": `BUILD_DIR ?= build
-.PHONY: package-local server transport proxy
+.PHONY: package-local packaging-tools server transport proxy
 package-local:
 	bash scripts/build-local-packages.sh --skip-tests --version 1.2.3 --component server --format deb
+packaging-tools:
+	mkdir -p build/tools
+	cp "$${PACKAGE_TEST_NFPM}" build/tools/nfpm
 server transport proxy:
 	mkdir -p "$(BUILD_DIR)"
 	printf '%s\n' 'fresh 1.2.3' > "$(BUILD_DIR)/neodse-$@"
@@ -99,7 +102,6 @@ set -eu
 case "$*" in
  "env GOOS") echo linux ;;
  "env GOARCH") echo amd64 ;;
- "-C tools/packaging build -o "*) cp "$PACKAGE_TEST_NFPM" build/tools/nfpm ;;
  *) exit 99 ;;
 esac
 `,

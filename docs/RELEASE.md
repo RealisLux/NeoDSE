@@ -7,9 +7,8 @@ Use this checklist for stable and prerelease tags. See
 
 ## Repository controls
 
-- Protect `main`, `dev` and `v*` tags and require the CI product checks. Keep
-  Tooling maintenance's `tool-audit` and all-manifest `dependency-review` checks
-  outside the required branch checks; assess their findings separately.
+- Protect `main`, `dev` and `v*` tags and require the CI quality jobs, including
+  workflow validation, and dependency review where available.
 - Configure production release with permitted deployment tags. Enable immutable releases.
 - Enable Dependabot, dependency review, secret scanning/push protection and
   private vulnerability reporting. Keep default workflow permissions read-only
@@ -43,15 +42,16 @@ On the exact release commit:
 - Review dependencies, action/image pins, Swagger assets, licenses, notices,
   package contents and SBOMs. Check that docs, provisioning, configuration,
   OpenAPI, service units and SELinux policy agree.
-- Build Syft and Grype from `tools/sbom` with the pinned Go toolchain using
-  `make sbom-tools`. Tool source/binary vulnerability audits run separately in
-  **Tooling maintenance** and do not gate publication; review their reports as
-  build-chain maintenance. Tool build or execution failures still block release.
-  Set Grype's target distribution explicitly: extracted payloads lack OS-release metadata. Set Syft's
-  `--source-name` to `sha256:` plus the package archive's SHA-256, then scan that
-  SBOM directly with Grype. Publication checks both reports for the same package
-  identity to reject mixed evidence. This metadata relies on trusted CI; it
-  neither signs the SBOM nor proves its bytes stayed unchanged after scanning.
+- Generate SPDX evidence with `anchore/sbom-action` and scan that SBOM using
+  `anchore/scan-action`. Keep their full commit pins and reviewed executable
+  version inputs. Set `SYFT_SOURCE_NAME` to `sha256:` plus the package archive's
+  SHA-256 and `GRYPE_DISTRO` to the target distribution; extracted payloads lack
+  OS-release metadata. Keep `severity-cutoff: high`, `fail-build: true` and
+  `only-fixed: false`. Disable the SBOM Action's automatic artifact/release
+  uploads and dependency submission. The package job retains its own reports;
+  the publication validator checks their package identity and all fix states.
+  This metadata relies on trusted CI; it neither signs the SBOM nor proves its
+  bytes stayed unchanged after scanning.
 - Check host-library advisories and record exact installed versions. Package
   SBOMs do not cover the host's GTK/WebKit, Weston, PAM, graphics stack or kernel.
   Apply distribution security updates and repeat native/browser qualification
