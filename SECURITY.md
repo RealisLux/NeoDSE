@@ -48,6 +48,19 @@ Actions. Runtime source/binary scans, package SBOM coverage and high/critical
 package findings remain publication gates. See the
 [tooling policy](docs/DEVELOPMENT.md#dependencies) for configuration and updates.
 
+## Host hardening (out of scope)
+
+Additional operating-system and physical-access hardening of controller servers
+and display clients is outside NeoDSE's scope. Measures such as disabling unused
+USB ports or devices, restricting local TTY consoles, hardening SSH access,
+disabling unnecessary host services and configuring host storage encryption
+(disks or volumes) are the deployment administrator's responsibility, according
+to the site's security policy and hosting environment.
+NeoDSE packages do not configure or enforce these measures; apply and validate
+them separately. Host storage encryption complements NeoDSE's built-in database
+encryption. The documented host prerequisites and NeoDSE service-level controls,
+including controller swap and configuration-secret protection, still apply.
+
 ## Secrets and rotation
 
 Configuration loading rejects symlinks, unexpected ownership, overly broad

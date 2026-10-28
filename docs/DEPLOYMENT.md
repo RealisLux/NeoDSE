@@ -123,6 +123,17 @@ updates enabled: clients use the distribution's WebKitGTK runtime, which
 installing NeoDSE alone may not update. After updates, restart the display
 services (or reboot if required) and repeat the display/proxy checks.
 
+Additional host hardening of both controller servers and display clients is
+outside NeoDSE's scope and remains the deployment administrator's responsibility.
+Examples include disabling unused USB ports or devices, restricting local TTY
+consoles, hardening SSH access, disabling unnecessary host services and configuring
+host storage encryption (disks or volumes). Apply and validate these measures
+according to the site's security policy and hosting environment; NeoDSE packages
+do not enforce them. Host storage encryption complements NeoDSE's built-in
+database encryption. The host and network requirements documented in this guide
+still apply.
+See [host hardening](../SECURITY.md#host-hardening-out-of-scope).
+
 On the controller, disable swap or ensure it is encrypted before bootstrap and
 maintenance commands. Those commands handle database secrets outside the server
 service's swap limit. Keep that host setting in place after reboot.
