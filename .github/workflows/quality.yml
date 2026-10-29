@@ -46,7 +46,9 @@ jobs:
           repo-checkout: false
           go-version-input: '1.27.3'
           check-latest: false
-          cache-dependency-path: go.sum
+          # The initial setup-go owns the shared module/build cache. Restoring
+          # it again over populated Go module directories causes tar collisions.
+          cache: false
           output-file: security.log
       - name: Scan NeoDSE runtime binaries
         run: make verify-binaries BUILD_DIR="${RUNNER_TEMP}/neodse-build" VERSION=1.0.0-ci 2>&1 | tee binary-security.log
