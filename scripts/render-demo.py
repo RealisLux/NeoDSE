@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MIT
 # Project: https://github.com/RealisLux/NeoDSE
 
-"""Render the silent control-room demo with FFmpeg's librsvg decoder.
+"""Render the silent display-management demo with FFmpeg's librsvg decoder.
 
 The scene follows unsynchronized startup, a shared playlist start time, alerts,
 a broadcast, one display's link loss and screen-power behavior.
@@ -128,12 +128,12 @@ def _clock(t):
 
 
 def _header(logos):
-    """Draw the product header and identify the room as an illustration."""
+    """Draw the product header and identify the illustration."""
     return "".join((
         _rect(0, 0, WIDTH, 86, "#0e1b2b"),
         _image(20, 8, 235, 70, logos.get("brand", "")),
         '<path d="M270 22v42" stroke="#35485e"/>',
-        _text(294, 39, "Control-room example", 25, "#f1f5fc", 700),
+        _text(294, 39, "Display management example", 25, "#f1f5fc", 700),
         _text(294, 65, "Web dashboards · Display actions · Self-hosted", 13, "#9bb4ce"),
         _text(1240, 35, "ILLUSTRATIVE DEMO", 10, "#8fa7c2", 700, "end"),
         _text(1240, 57, "Three Linux display clients", 11, "#8fa7c2", 400, "end"),
@@ -395,7 +395,7 @@ def scene_svg(t: float, logos: dict) -> str:
     t = float(t) % DURATION
     out = ['<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" '
            'viewBox="0 0 1280 720" role="img">',
-           '<title>NeoDSE control-room example</title>',
+           '<title>NeoDSE display-management example</title>',
            '<defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="8" refY="5" '
            'markerWidth="5" markerHeight="5" orient="auto">'
            '<path d="M0 0 10 5 0 10Z" fill="#8da7c4"/></marker></defs>',
@@ -496,7 +496,7 @@ def main():
     """Regenerate the README illustration and optional review stills."""
     root = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output', type=Path, default=root / 'neodse-control-room.gif')
+    parser.add_argument('--output', type=Path, default=root / 'neodse-display-management.gif')
     parser.add_argument('--preview-dir', type=Path,
                         help='also save selected SVG/PNG stills to inspect the sequence')
     args = parser.parse_args()

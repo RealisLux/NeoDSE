@@ -325,7 +325,7 @@ For individual files, including nested assets and vendored files, run
 | `go.mod`, `go.sum` | Runtime module versions and checksums |
 | `.clang-format`, `.editorconfig`, `.gitattributes`, `.gitignore` | Formatting, text-file conventions and generated-file exclusions |
 | `neodse-architecture.svg`, `neodse-api-routes.svg`, `neodse-overview.svg` | Architecture, API and example operational-flow diagrams |
-| `neodse-control-room.gif`, `neodse-logo.png`, `neodse-logo-mono.png` | Example demonstration and project logos |
+| `neodse-display-management.gif`, `neodse-logo.png`, `neodse-logo-mono.png` | Example demonstration and project logos |
 
 UI callbacks are cancelled before shutdown; hidden waiting screens stop animation
 timers. See [development](DEVELOPMENT.md) for change rules and

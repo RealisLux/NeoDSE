@@ -18,7 +18,7 @@
   </defs>
   <rect width="1400" height="890" fill="#ffffff"/>
   <text x="32" y="57" class="title">Operational dashboards and automated display alerts</text>
-  <text x="32" y="90" class="body">Control-room example: present infrastructure data and deliver visible and audible incident notifications.</text>
+  <text x="32" y="90" class="body">Display management example: present infrastructure data and deliver visible and audible incident notifications.</text>
 
   <!-- Two complementary inputs: web information and monitoring notifications. -->
   <rect x="32" y="140" width="350" height="180" rx="16" fill="#eff6ff" stroke="#cbd5e1" stroke-width="2"/>

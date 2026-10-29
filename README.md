@@ -10,10 +10,10 @@ services.
 
 [Get started](#get-started) · [Documentation](#documentation) · [Releases](https://github.com/RealisLux/NeoDSE/releases)
 
-![Control-room example: three displays start independently with blue then green connection logos and begin their playlists at one shared time, rotate pages in step, show individual and broadcast banners below persistent display names and clocks with sound cues and amber light strips, keep playing while one display's status N turns red during a network loss, and follow a screen-power schedule with a reminder banner.](neodse-control-room.gif)
+![Display-management example: three displays start independently with blue then green connection logos and begin their playlists at one shared time, rotate pages in step, show individual and broadcast banners below persistent display names and clocks with sound cues and amber light strips, keep playing while one display's status N turns red during a network loss, and follow a screen-power schedule with a reminder banner.](neodse-display-management.gif)
 
-*A control room is one example; NeoDSE also suits offices, reception areas and
-other shared spaces. The animation shows sound visually; warning lights need a
+*The animation illustrates shared display management in spaces such as offices,
+reception areas and other venues. Sound is shown visually; warning lights need a
 compatible serial controller.* See the [example request flow](neodse-overview.svg).
 
 ## Why choose NeoDSE?
