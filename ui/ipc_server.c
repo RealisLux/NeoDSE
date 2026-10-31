@@ -12,6 +12,7 @@
 #include "validation.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <pwd.h>
 #include <string.h>
@@ -28,11 +29,15 @@ static struct
     pthread_mutex_t mutex;
     int listener;
     int client;
+    int directory;
+    char* socket_name;
     gint stopping;
     gboolean started;
-} ipc_server = { .mutex = PTHREAD_MUTEX_INITIALIZER, .listener = -1, .client = -1 };
+} ipc_server
+    = { .mutex = PTHREAD_MUTEX_INITIALIZER, .listener = -1, .client = -1, .directory = -1 };
 
-#define DEFAULT_SOCKET_PATH "/run/neodse/ui.sock"
+#define SOCKET_DIRECTORY "/run/neodse"
+#define DEFAULT_SOCKET_PATH SOCKET_DIRECTORY "/ui.sock"
 /* Descriptor exhaustion fails every accept at once until a descriptor is freed. */
 #define ACCEPT_RETRY_DELAY_US G_USEC_PER_SEC
 
@@ -85,6 +90,18 @@ static void send_response(int client, gboolean accepted, const char* error_messa
 
 /* ---------- socket loop ---------- */
 
+/* remove_socket_path cleans up the captured name in the verified runtime directory. */
+static void remove_socket_path(void)
+{
+    if (ipc_server.directory >= 0)
+    {
+        (void)unlinkat(ipc_server.directory, ipc_server.socket_name, 0);
+        close(ipc_server.directory);
+        ipc_server.directory = -1;
+        g_clear_pointer(&ipc_server.socket_name, g_free);
+    }
+}
+
 /* open_ipc_socket safely replaces the expected socket and begins listening. */
 static int open_ipc_socket(void)
 {
@@ -96,18 +113,45 @@ static int open_ipc_socket(void)
         g_printerr("[IPC] ! Socket path must be a bounded path under /run/neodse\n");
         return -1;
     }
-    struct stat existing;
-    if (lstat(path, &existing) == 0)
+    /* /run is root-managed. Reject symlinked or externally writable IPC directories
+     * before examining entries: only our UID (and root) may replace their names.
+     * Keep this descriptor for all subsequent permission changes and cleanup. */
+    int directory = open(SOCKET_DIRECTORY, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    if (directory < 0)
     {
-        if (!S_ISSOCK(existing.st_mode) || unlink(path) < 0)
+        g_printerr("[IPC] ! Runtime directory open failed: %s\n", g_strerror(errno));
+        return -1;
+    }
+    struct stat directory_stat;
+    if (fstat(directory, &directory_stat) < 0 || directory_stat.st_uid != geteuid()
+        || (directory_stat.st_mode & (S_IWGRP | S_IWOTH)) != 0)
+    {
+        g_printerr(
+            "[IPC] ! Runtime directory must be owned by the UI UID and writable only by it\n");
+        close(directory);
+        return -1;
+    }
+
+    const char* name = strrchr(path, '/') + 1;
+    int existing_fd = openat(directory, name, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+    if (existing_fd >= 0)
+    {
+        struct stat existing;
+        gboolean is_socket = fstat(existing_fd, &existing) == 0 && S_ISSOCK(existing.st_mode);
+        close(existing_fd);
+        /* The verified directory permissions prevent an untrusted UID from
+         * exchanging this entry between the descriptor check and unlinkat. */
+        if (!is_socket || unlinkat(directory, name, 0) < 0)
         {
             g_printerr("[IPC] ! Refusing to replace socket path: %s\n", path);
+            close(directory);
             return -1;
         }
     }
     else if (errno != ENOENT)
     {
         g_printerr("[IPC] ! Socket path lookup failed: %s\n", g_strerror(errno));
+        close(directory);
         return -1;
     }
 
@@ -115,6 +159,7 @@ static int open_ipc_socket(void)
     if (fd < 0)
     {
         g_printerr("[IPC] ! Socket creation failed: %s\n", g_strerror(errno));
+        close(directory);
         return -1;
     }
 
@@ -124,6 +169,7 @@ static int open_ipc_socket(void)
     {
         g_printerr("[IPC] ! Socket bind failed: %s\n", g_strerror(errno));
         close(fd);
+        close(directory);
         return -1;
     }
 
@@ -131,18 +177,22 @@ static int open_ipc_socket(void)
     {
         g_printerr("[IPC] ! Socket listen failed: %s\n", g_strerror(errno));
         close(fd);
-        unlink(path);
+        (void)unlinkat(directory, name, 0);
+        close(directory);
         return -1;
     }
 
-    if (chmod(path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
+    if (fchmodat(directory, name, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP, 0) < 0)
     {
         g_printerr("[IPC] ! Socket permission change failed: %s\n", g_strerror(errno));
         close(fd);
-        unlink(path);
+        (void)unlinkat(directory, name, 0);
+        close(directory);
         return -1;
     }
 
+    ipc_server.directory = directory;
+    ipc_server.socket_name = g_strdup(name);
     g_print("[IPC] Listening on %s\n", path);
     return fd;
 }
@@ -253,7 +303,7 @@ gboolean ipc_start(void)
     {
         close(fd);
         ipc_server.listener = -1;
-        unlink(socket_path());
+        remove_socket_path();
         return FALSE;
     }
     ipc_server.started = TRUE;
@@ -279,7 +329,7 @@ void ipc_stop(void)
     (void)pthread_join(ipc_server.thread, NULL);
     ipc_server.started = FALSE;
     ipc_server.listener = -1;
-    (void)unlink(socket_path());
+    remove_socket_path();
     while (g_main_context_pending(NULL))
     {
         (void)g_main_context_iteration(NULL, FALSE);

@@ -98,7 +98,7 @@ ui-test:
 	$(CC) $(UI_TEST_CFLAGS) ui/tests/ipc_server_test.c ui/ipc_server.c ui/validation.c \
 		-o "$(BUILD_DIR)/neodse-ui-ipc-server-test" \
 		$(call system_cflags,glib-2.0) $$(pkg-config --libs glib-2.0) \
-		-pthread -Wl,--wrap=accept4,--wrap=bind,--wrap=lstat,--wrap=chmod,--wrap=unlink,--wrap=getpwnam \
+		-pthread -Wl,--wrap=accept4,--wrap=bind,--wrap=open,--wrap=openat,--wrap=fstat,--wrap=fchmodat,--wrap=getpwnam \
 		-pie -Wl,-z,relro,-z,now
 	"$(BUILD_DIR)/neodse-ui-ipc-server-test"
 	# Inert GTK/WebKit stand-ins need headers only; clocks and timers are wrapped.
@@ -128,7 +128,7 @@ ui-test-sanitize:
 	$(CC) $(UI_SANITIZER_CFLAGS) ui/tests/ipc_server_test.c ui/ipc_server.c ui/validation.c \
 		-o "$(BUILD_DIR)/neodse-ui-ipc-server-test-sanitize" \
 		$(call system_cflags,glib-2.0) $$(pkg-config --libs glib-2.0) \
-		-pthread -Wl,--wrap=accept4,--wrap=bind,--wrap=lstat,--wrap=chmod,--wrap=unlink,--wrap=getpwnam \
+		-pthread -Wl,--wrap=accept4,--wrap=bind,--wrap=open,--wrap=openat,--wrap=fstat,--wrap=fchmodat,--wrap=getpwnam \
 		-fsanitize=address,undefined -Wl,-z,relro,-z,now
 	ASAN_OPTIONS=$(SANITIZER_OPTIONS) UBSAN_OPTIONS=$(UNDEFINED_SANITIZER_OPTIONS) \
 		"$(BUILD_DIR)/neodse-ui-ipc-server-test-sanitize"

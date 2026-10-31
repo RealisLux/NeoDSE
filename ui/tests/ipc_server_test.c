@@ -11,8 +11,10 @@
 #include "../ipc.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <glib.h>
 #include <pwd.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
@@ -24,12 +26,19 @@ static gint receive_started;
 static gint accept_calls;
 static char* fixture_socket_path;
 static char* fixture_actual_path;
+static char* fixture_directory;
+static gboolean wrong_directory_owner;
+static gboolean fail_directory_stat;
+static gboolean fail_socket_lookup;
+static gboolean fail_socket_chmod;
+static int fixture_directory_fd = -1;
 
 int __real_accept4(int socket, struct sockaddr* address, socklen_t* length, int flags);
 int __real_bind(int socket, const struct sockaddr* address, socklen_t length);
-int __real_lstat(const char* path, struct stat* information);
-int __real_chmod(const char* path, mode_t mode);
-int __real_unlink(const char* path);
+int __real_open(const char* path, int flags, ...);
+int __real_openat(int directory, const char* path, int flags, ...);
+int __real_fstat(int fd, struct stat* information);
+int __real_fchmodat(int directory, const char* path, mode_t mode, int flags);
 struct passwd* __real_getpwnam(const char* name);
 
 /* fixture_path redirects only this test's socket into its private temporary directory. */
@@ -65,15 +74,58 @@ int __wrap_bind(int socket, const struct sockaddr* address, socklen_t length)
     return __real_bind(socket, address, length);
 }
 
-/* File-operation wrappers follow the same isolated socket as bind. */
-int __wrap_lstat(const char* path, struct stat* information)
+/* __wrap_open redirects the production directory while preserving its open flags. */
+int __wrap_open(const char* path, int flags, ...)
 {
-    return __real_lstat(fixture_path(path), information);
+    g_assert_cmpint(flags & O_CREAT, ==, 0);
+    if (fixture_directory != NULL && strcmp(path, "/run/neodse") == 0)
+    {
+        g_assert_true((flags & (O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC))
+            == (O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC));
+        fixture_directory_fd = __real_open(fixture_directory, flags);
+        return fixture_directory_fd;
+    }
+    return __real_open(path, flags);
 }
 
-int __wrap_chmod(const char* path, mode_t mode) { return __real_chmod(fixture_path(path), mode); }
+/* __wrap_openat preserves descriptor-relative lookups and injects a lookup failure. */
+int __wrap_openat(int directory, const char* path, int flags, ...)
+{
+    g_assert_cmpint(flags & O_CREAT, ==, 0);
+    if (directory == fixture_directory_fd && fail_socket_lookup)
+    {
+        errno = EACCES;
+        return -1;
+    }
+    return __real_openat(directory, path, flags);
+}
 
-int __wrap_unlink(const char* path) { return __real_unlink(fixture_path(path)); }
+/* __wrap_fstat models an unsafe owner or an unavailable directory metadata lookup. */
+int __wrap_fstat(int fd, struct stat* information)
+{
+    if (fd == fixture_directory_fd && fail_directory_stat)
+    {
+        errno = EIO;
+        return -1;
+    }
+    int result = __real_fstat(fd, information);
+    if (result == 0 && fd == fixture_directory_fd && wrong_directory_owner)
+    {
+        information->st_uid = geteuid() + 1;
+    }
+    return result;
+}
+
+/* __wrap_fchmodat injects a failure after bind to exercise socket cleanup. */
+int __wrap_fchmodat(int directory, const char* path, mode_t mode, int flags)
+{
+    if (directory == fixture_directory_fd && fail_socket_chmod)
+    {
+        errno = EACCES;
+        return -1;
+    }
+    return __real_fchmodat(directory, path, mode, flags);
+}
 
 /* __wrap_getpwnam makes the current unprivileged test process the configured agent. */
 struct passwd* __wrap_getpwnam(const char* name)
@@ -108,19 +160,24 @@ gboolean ipc_process_message(
     return FALSE;
 }
 
-static char* fixture_directory;
-
-/* start_fixture starts the listener on an isolated socket and returns its real path. */
-static const char* start_fixture(void)
+/* prepare_fixture isolates the runtime directory and socket without starting the server. */
+static void prepare_fixture(void)
 {
     GError* error = NULL;
     fixture_directory = g_dir_make_tmp("neodse-ipc-server-XXXXXX", &error);
     g_assert_no_error(error);
     g_assert_nonnull(fixture_directory);
     fixture_socket_path = g_strdup_printf("/run/neodse/test-ipc-%d.sock", (int)getpid());
-    fixture_actual_path = g_build_filename(fixture_directory, "ui.sock", NULL);
+    fixture_actual_path
+        = g_build_filename(fixture_directory, strrchr(fixture_socket_path, '/') + 1, NULL);
     g_setenv("NEODSE_UI_SOCKET", fixture_socket_path, TRUE);
     g_atomic_int_set(&receive_started, FALSE);
+}
+
+/* start_fixture starts the listener on an isolated socket and returns its real path. */
+static const char* start_fixture(void)
+{
+    prepare_fixture();
     g_assert_true(ipc_start());
     return fixture_actual_path;
 }
@@ -134,6 +191,7 @@ static void finish_fixture(void)
     g_free(fixture_actual_path);
     fixture_socket_path = NULL;
     fixture_actual_path = NULL;
+    fixture_directory_fd = -1;
     g_assert_cmpint(rmdir(fixture_directory), ==, 0);
     g_clear_pointer(&fixture_directory, g_free);
 }
@@ -171,6 +229,133 @@ static void test_server_start_stop(void)
     finish_fixture();
 }
 
+static void test_stale_socket(void)
+{
+    prepare_fixture();
+    int stale = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    g_assert_cmpint(stale, >=, 0);
+    struct sockaddr_un address = { .sun_family = AF_UNIX };
+    g_strlcpy(address.sun_path, fixture_actual_path, sizeof(address.sun_path));
+    g_assert_cmpint(bind(stale, (struct sockaddr*)&address, sizeof(address)), ==, 0);
+    close(stale);
+    g_assert_true(ipc_start());
+    ipc_stop();
+    finish_fixture();
+}
+
+static void test_refuse_existing_entry(gconstpointer kind)
+{
+    prepare_fixture();
+    char* target = g_build_filename(fixture_directory, "target", NULL);
+    g_assert_true(g_file_set_contents(target, "preserve", -1, NULL));
+    if (strcmp(kind, "symlink") == 0)
+    {
+        g_assert_cmpint(symlink(target, fixture_actual_path), ==, 0);
+    }
+    else if (strcmp(kind, "directory") == 0)
+    {
+        g_assert_cmpint(mkdir(fixture_actual_path, 0700), ==, 0);
+    }
+    else
+    {
+        g_assert_true(g_file_set_contents(fixture_actual_path, "preserve", -1, NULL));
+    }
+    struct stat entry;
+    g_assert_cmpint(lstat(fixture_actual_path, &entry), ==, 0);
+    mode_t original_mode = entry.st_mode;
+    g_assert_false(ipc_start());
+    g_assert_cmpint(lstat(fixture_actual_path, &entry), ==, 0);
+    if (strcmp(kind, "symlink") == 0)
+    {
+        g_assert_true(S_ISLNK(entry.st_mode));
+    }
+    else if (strcmp(kind, "directory") == 0)
+    {
+        g_assert_true(S_ISDIR(entry.st_mode));
+    }
+    else
+    {
+        g_assert_true(S_ISREG(entry.st_mode));
+    }
+    char* contents = NULL;
+    g_assert_true(g_file_get_contents(target, &contents, NULL, NULL));
+    g_assert_cmpstr(contents, ==, "preserve");
+    g_free(contents);
+    g_assert_cmpuint(entry.st_mode, ==, original_mode);
+    if (S_ISDIR(entry.st_mode))
+    {
+        g_assert_cmpint(rmdir(fixture_actual_path), ==, 0);
+    }
+    else
+    {
+        g_assert_cmpint(unlink(fixture_actual_path), ==, 0);
+    }
+    g_assert_cmpint(unlink(target), ==, 0);
+    g_free(target);
+    finish_fixture();
+}
+
+static void test_unsafe_directory(gconstpointer kind)
+{
+    prepare_fixture();
+    g_assert_true(g_file_set_contents(fixture_actual_path, "preserve", -1, NULL));
+    wrong_directory_owner = strcmp(kind, "owner") == 0;
+    fail_directory_stat = strcmp(kind, "stat") == 0;
+    mode_t mode = strcmp(kind, "group") == 0 ? 0770 : strcmp(kind, "world") == 0 ? 0702 : 0700;
+    g_assert_cmpint(chmod(fixture_directory, mode), ==, 0);
+    g_assert_false(ipc_start());
+    wrong_directory_owner = FALSE;
+    fail_directory_stat = FALSE;
+    g_assert_cmpint(chmod(fixture_directory, 0700), ==, 0);
+    char* contents = NULL;
+    g_assert_true(g_file_get_contents(fixture_actual_path, &contents, NULL, NULL));
+    g_assert_cmpstr(contents, ==, "preserve");
+    g_free(contents);
+    g_assert_cmpint(unlink(fixture_actual_path), ==, 0);
+    finish_fixture();
+}
+
+static void test_symlink_directory(void)
+{
+    prepare_fixture();
+    char* actual_directory = g_strconcat(fixture_directory, "-actual", NULL);
+    g_assert_cmpint(rename(fixture_directory, actual_directory), ==, 0);
+    g_assert_cmpint(symlink(actual_directory, fixture_directory), ==, 0);
+    g_assert_false(ipc_start());
+    g_assert_cmpint(unlink(fixture_directory), ==, 0);
+    g_assert_cmpint(rename(actual_directory, fixture_directory), ==, 0);
+    g_free(actual_directory);
+    finish_fixture();
+}
+
+static void test_socket_failures(gconstpointer kind)
+{
+    prepare_fixture();
+    fail_socket_lookup = strcmp(kind, "lookup") == 0;
+    fail_socket_chmod = strcmp(kind, "chmod") == 0;
+    g_assert_false(ipc_start());
+    fail_socket_lookup = FALSE;
+    fail_socket_chmod = FALSE;
+    /* Failure must release resources and allow a fresh start. */
+    g_assert_cmpint(access(fixture_actual_path, F_OK), !=, 0);
+    g_assert_true(ipc_start());
+    ipc_stop();
+    finish_fixture();
+}
+
+static void test_stop_captured_path(void)
+{
+    start_fixture();
+    char* replacement = g_build_filename(fixture_directory, "replacement.sock", NULL);
+    g_assert_true(g_file_set_contents(replacement, "preserve", -1, NULL));
+    g_setenv("NEODSE_UI_SOCKET", "/run/neodse/replacement.sock", TRUE);
+    ipc_stop();
+    g_assert_true(g_file_test(replacement, G_FILE_TEST_IS_REGULAR));
+    g_assert_cmpint(unlink(replacement), ==, 0);
+    g_free(replacement);
+    finish_fixture();
+}
+
 /* Exhausted descriptors fail accept immediately; the listener must pause, not spin. */
 static void test_accept_failure_pauses(void)
 {
@@ -202,5 +387,17 @@ int main(int argc, char** argv)
     g_test_init(&argc, &argv, NULL);
     g_test_add_func("/ipc-server/start-stop-blocked-client", test_server_start_stop);
     g_test_add_func("/ipc-server/accept-failure-pauses", test_accept_failure_pauses);
+    g_test_add_func("/ipc-server/stale-socket", test_stale_socket);
+    g_test_add_data_func("/ipc-server/refuse-file", "file", test_refuse_existing_entry);
+    g_test_add_data_func("/ipc-server/refuse-symlink", "symlink", test_refuse_existing_entry);
+    g_test_add_data_func("/ipc-server/refuse-directory", "directory", test_refuse_existing_entry);
+    g_test_add_data_func("/ipc-server/unsafe-group-writable", "group", test_unsafe_directory);
+    g_test_add_data_func("/ipc-server/unsafe-world-writable", "world", test_unsafe_directory);
+    g_test_add_data_func("/ipc-server/unsafe-owner", "owner", test_unsafe_directory);
+    g_test_add_data_func("/ipc-server/directory-stat-failure", "stat", test_unsafe_directory);
+    g_test_add_func("/ipc-server/symlink-directory", test_symlink_directory);
+    g_test_add_data_func("/ipc-server/lookup-failure", "lookup", test_socket_failures);
+    g_test_add_data_func("/ipc-server/chmod-failure", "chmod", test_socket_failures);
+    g_test_add_func("/ipc-server/stop-captured-path", test_stop_captured_path);
     return g_test_run();
 }
