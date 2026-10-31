@@ -18,15 +18,32 @@ import (
 	"github.com/RealisLux/NeoDSE/internal/instruction"
 )
 
+// cecAdapter is the local hardware boundary for CEC operations and diagnostics.
+type cecAdapter interface {
+	ConfigurePlayback(string) error
+	Description() string
+	Poll(uint8) (bool, error)
+	ImageViewOn(uint8) error
+	Standby(uint8) error
+	ActiveSource() error
+	PowerStatus(uint8) (cec.PowerStatus, error)
+	ToggleMute(uint8) error
+	VolumeUp(uint8) error
+	VolumeDown(uint8) error
+	SetAudioVolumeLevel(uint8, uint8) error
+	SetDebugLogger(func(string, ...any))
+	Close() error
+}
+
 // controlAudio maps one validated action to a complete CEC key press.
 func (a *Agent) controlAudio(action string) (string, error) {
-	return a.controlCECAudio("HDMI-CEC audio", "", func(device *cec.Device, target uint8) error {
+	return a.controlCECAudio("HDMI-CEC audio", " action="+action, func(device cecAdapter, target uint8) error {
 		return executeCECAudioAction(device, target, action)
 	})
 }
 
 // executeCECAudioAction maps one validated relative audio operation to CEC.
-func executeCECAudioAction(device *cec.Device, target uint8, action string) error {
+func executeCECAudioAction(device cecAdapter, target uint8, action string) error {
 	switch action {
 	case "mute":
 		return device.ToggleMute(target)
@@ -41,7 +58,7 @@ func executeCECAudioAction(device *cec.Device, target uint8, action string) erro
 
 // controlAudioVolume sends the CEC 2.0 absolute volume command.
 func (a *Agent) controlAudioVolume(level uint8) (string, error) {
-	return a.controlCECAudio("HDMI-CEC audio volume", fmt.Sprintf(" level=%d", level), func(device *cec.Device, target uint8) error {
+	return a.controlCECAudio("HDMI-CEC audio volume", fmt.Sprintf(" level=%d", level), func(device cecAdapter, target uint8) error {
 		return device.SetAudioVolumeLevel(target, level)
 	})
 }
@@ -49,7 +66,9 @@ func (a *Agent) controlAudioVolume(level uint8) (string, error) {
 // controlCECAudio sends one audio operation to the detected audio endpoint and
 // falls back to the TV when a separate Audio System does not acknowledge it.
 // The details name the adapter and the target that received the operation.
-func (a *Agent) controlCECAudio(operation, detail string, send func(*cec.Device, uint8) error) (string, error) {
+func (a *Agent) controlCECAudio(operation, detail string, send func(cecAdapter, uint8) error) (details string, err error) {
+	started := time.Now()
+	defer func() { a.logCECOperation(operation+detail, started, details, err) }()
 	if !a.config.CEC.Enabled {
 		return "", errors.New("HDMI-CEC is disabled in agent configuration")
 	}
@@ -65,12 +84,13 @@ func (a *Agent) controlCECAudio(operation, detail string, send func(*cec.Device,
 	}
 	err = send(device, target)
 	if errors.Is(err, cec.ErrNotAcknowledged) && target == cec.LogicalAddressAudioSystem {
+		a.verbosef("| HDMI-CEC audio fallback from=%d to=%d reason=%v", target, cec.LogicalAddressTV, err)
 		target = cec.LogicalAddressTV
 		a.cecAudioAddress = target
 		a.cecAudioAddressKnown = true
 		err = send(device, target)
 	}
-	details := fmt.Sprintf("%s audio_target=%d%s", device.Description(), target, detail)
+	details = fmt.Sprintf("%s audio_target=%d%s", device.Description(), target, detail)
 	if err != nil {
 		return details, fmt.Errorf("%s: %w", operation, err)
 	}
@@ -78,7 +98,9 @@ func (a *Agent) controlCECAudio(operation, detail string, send func(*cec.Device,
 }
 
 // controlDisplay maps a validated display state to fixed CEC operations.
-func (a *Agent) controlDisplay(state instruction.DisplayOperation) (string, error) {
+func (a *Agent) controlDisplay(state instruction.DisplayOperation) (details string, err error) {
+	started := time.Now()
+	defer func() { a.logCECOperation("HDMI-CEC display action="+string(state), started, details, err) }()
 	if !a.config.CEC.Enabled {
 		return "", errors.New("HDMI-CEC is disabled in agent configuration")
 	}
@@ -100,11 +122,21 @@ func (a *Agent) controlDisplay(state instruction.DisplayOperation) (string, erro
 	default:
 		return "", fmt.Errorf("unknown display state=%s", state)
 	}
-	details := device.Description()
+	details = device.Description()
 	if err != nil {
 		return details, fmt.Errorf("HDMI-CEC: %w", err)
 	}
 	return details, nil
+}
+
+// logCECOperation summarizes a hardware command without claiming that a sent
+// command proves the display's physical state. Failures retain adapter details.
+func (a *Agent) logCECOperation(operation string, started time.Time, details string, err error) {
+	if err != nil {
+		a.verbosef("! %s result=failed device=%s duration=%s details=%q error=%v", operation, a.config.CEC.Device, time.Since(started), details, err)
+		return
+	}
+	a.verbosef("| %s result=sent device=%s duration=%s details=%q", operation, a.config.CEC.Device, time.Since(started), details)
 }
 
 // cecPowerStatus queries the configured display and returns a normalized state
@@ -153,7 +185,7 @@ func (a *Agent) closeCEC() {
 }
 
 // cecDeviceLocked opens and configures the adapter while the caller owns cecMu.
-func (a *Agent) cecDeviceLocked(requirePlayback bool) (*cec.Device, error) {
+func (a *Agent) cecDeviceLocked(requirePlayback bool) (cecAdapter, error) {
 	if a.cecDevice == nil {
 		device, err := cec.Open(a.config.CEC.Device)
 		if err != nil {
@@ -162,17 +194,21 @@ func (a *Agent) cecDeviceLocked(requirePlayback bool) (*cec.Device, error) {
 		a.cecDevice = device
 		a.cecAudioAddressKnown = false
 	}
+	if a.debug {
+		a.cecDevice.SetDebugLogger(a.debugf)
+	}
 	if err := a.cecDevice.ConfigurePlayback("NeoDSE"); err != nil {
 		if requirePlayback || !errors.Is(err, cec.ErrNoPhysicalAddress) {
 			return nil, err
 		}
+		a.debugf("| HDMI-CEC wake without physical address: %v", err)
 	}
 	return a.cecDevice, nil
 }
 
 // cecAudioTargetLocked prefers the standard Audio System address and falls back
 // to the TV when no separate audio system acknowledges the polling message.
-func (a *Agent) cecAudioTargetLocked(device *cec.Device) (uint8, error) {
+func (a *Agent) cecAudioTargetLocked(device cecAdapter) (uint8, error) {
 	if a.cecAudioAddressKnown {
 		return a.cecAudioAddress, nil
 	}
@@ -185,6 +221,7 @@ func (a *Agent) cecAudioTargetLocked(device *cec.Device) (uint8, error) {
 		a.cecAudioAddress = cec.LogicalAddressAudioSystem
 	}
 	a.cecAudioAddressKnown = true
+	a.verbosef("| HDMI-CEC audio target=%d audio_system_present=%t", a.cecAudioAddress, present)
 	return a.cecAudioAddress, nil
 }
 

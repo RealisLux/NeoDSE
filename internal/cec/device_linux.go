@@ -14,6 +14,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -186,6 +187,16 @@ type Device struct {
 	ioctl     ioctlFunc
 	caps      cecCaps
 	initiator uint8
+	debugf    func(string, ...any)
+}
+
+// SetDebugLogger installs optional synchronous exchange diagnostics. The logger
+// runs under the device lock and must not call back into Device methods.
+// Passing nil disables diagnostics. Only explicit exchanges are traced.
+func (device *Device) SetDebugLogger(logger func(string, ...any)) {
+	device.mu.Lock()
+	defer device.mu.Unlock()
+	device.debugf = logger
 }
 
 // Open validates and opens one explicit Linux CEC device.
@@ -412,7 +423,18 @@ func (device *Device) transmit(payload []uint8, target, reply uint8) (*cecMessag
 	message := &cecMessage{Length: messageLengths[len(payload)], Reply: reply}
 	message.Data[0] = initiator<<4 | target
 	copy(message.Data[1:], payload)
-	if err := device.ioctl(fd, ioctlTransmit, ioctlPointer(message)); err != nil {
+	var started time.Time
+	if device.debugf != nil {
+		started = time.Now()
+		device.debugf("| HDMI-CEC transmit device=%s frame=% x reply_opcode=0x%02x", device.path, message.Data[:message.Length], reply)
+	}
+	err = device.ioctl(fd, ioctlTransmit, ioctlPointer(message))
+	if device.debugf != nil {
+		device.debugf("| HDMI-CEC exchange device=%s frame=% x tx_status=0x%02x rx_status=0x%02x arbitration_lost=%d nack=%d low_drive=%d tx_error=%d duration=%s ioctl_error=%v",
+			device.path, message.Data[:min(message.Length, uint32(len(message.Data)))], message.TxStatus, message.RxStatus,
+			message.TxArbLostCnt, message.TxNACKCnt, message.TxLowDriveCnt, message.TxErrorCnt, time.Since(started), err)
+	}
+	if err != nil {
 		return message, fmt.Errorf("transmit CEC message: %w", mapErrno(err))
 	}
 	if message.TxStatus&txStatusOK == 0 {

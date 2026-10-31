@@ -85,13 +85,17 @@ func (a *Agent) refreshCECStatusIfDue() {
 	if !a.config.CEC.Enabled {
 		return
 	}
-	_, _, checkedAt := a.currentCECStatus()
+	previous, _, checkedAt := a.currentCECStatus()
 	if !checkedAt.IsZero() && time.Since(checkedAt) < cecStatusPollInterval {
 		return
 	}
 	power, output, err := a.cecPowerStatus()
 	if err != nil {
-		a.verbosef("! HDMI-CEC status probe failed: %v", err)
+		a.verbosef("! HDMI-CEC status probe failed device=%s error=%v", a.config.CEC.Device, err)
+	} else if checkedAt.IsZero() || power != previous {
+		a.verbosef("| HDMI-CEC power status previous=%s current=%s details=%q", previous, power, output)
+	} else {
+		a.debugf("| HDMI-CEC power status unchanged=%s details=%q", power, output)
 	}
 	a.rememberCECStatus(power, output)
 }

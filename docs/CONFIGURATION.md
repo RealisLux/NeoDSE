@@ -437,6 +437,18 @@ emitted only at `verbose` or `debug`, including authentication failures. Set
 `server.log_level: verbose` or start `neodse-server` with `--verbose` to enable
 them. Requests without a valid token remain rate limited per source address.
 
+For HDMI-CEC diagnostics, set `agent.log_level` to `verbose` to log command
+results, adapter details, audio-target selection and fallback, and observed
+power-state changes. Command summaries use `result=sent` when the CEC exchange
+succeeds; the display's reported power state is logged separately. Failed
+commands also retain the normal INFO-level `Command failed` entry.
+
+At `debug`, the agent additionally logs the transmitted and returned CEC frame
+bytes, reply opcode, kernel TX/RX status masks, retry/error counters and exchange
+duration, along with unchanged power probes. These traces cover exchanges
+initiated by NeoDSE. Repeated successful probes with an unchanged state remain
+silent at `verbose`.
+
 For example, after changing agent configuration:
 
 ```bash

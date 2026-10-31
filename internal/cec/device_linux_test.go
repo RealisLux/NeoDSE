@@ -7,10 +7,72 @@ package cec
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"unsafe"
 )
+
+// TestExchangeDebugDiagnostics preserves transmitted bytes separately from
+// received bytes and exposes kernel outcomes without changing returned errors.
+func TestExchangeDebugDiagnostics(t *testing.T) {
+	for _, outcome := range []string{"reply", "nack", "timeout", "ioctl error"} {
+		t.Run(outcome, func(t *testing.T) {
+			ioctlErr := errors.New("adapter disconnected")
+			device := testDevice(t, func(_ int, _ uintptr, value unsafe.Pointer) error {
+				message := (*cecMessage)(value)
+				switch outcome {
+				case "reply":
+					message.TxStatus, message.RxStatus = txStatusOK, rxStatusOK
+					message.Length = 3
+					message.Data[0], message.Data[1], message.Data[2] = 0x04, opcodeReportPowerStatus, uint8(PowerStandby)
+				case "nack":
+					message.TxStatus, message.TxNACKCnt = txStatusNACK, 2
+				case "timeout":
+					message.TxStatus, message.RxStatus = txStatusOK, rxStatusTimeout
+				case "ioctl error":
+					return ioctlErr
+				}
+				return nil
+			})
+			var output strings.Builder
+			device.SetDebugLogger(func(format string, values ...any) {
+				fmt.Fprintf(&output, format+"\n", values...)
+			})
+			_, err := device.PowerStatus(LogicalAddressTV)
+			var wantErr error
+			switch outcome {
+			case "nack":
+				wantErr = ErrNotAcknowledged
+			case "timeout":
+				wantErr = ErrReplyTimeout
+			case "ioctl error":
+				wantErr = ioctlErr
+			}
+			if !errors.Is(err, wantErr) {
+				t.Fatalf("PowerStatus error=%v, want %v", err, wantErr)
+			}
+			for _, want := range []string{"transmit device=/dev/cec-test frame=40 8f", "reply_opcode=0x90", "HDMI-CEC exchange", "tx_status=", "rx_status=", "duration=", "ioctl_error="} {
+				if !strings.Contains(output.String(), want) {
+					t.Fatalf("missing %q in %s", want, output.String())
+				}
+			}
+			if outcome == "reply" && !strings.Contains(output.String(), "frame=04 90 01 tx_status=0x01 rx_status=0x01") {
+				t.Fatalf("missing received frame: %s", output.String())
+			}
+			if outcome == "nack" && !strings.Contains(output.String(), "nack=2") {
+				t.Fatalf("missing kernel NACK count: %s", output.String())
+			}
+			output.Reset()
+			device.SetDebugLogger(nil)
+			_, _ = device.PowerStatus(LogicalAddressTV)
+			if output.Len() != 0 {
+				t.Fatal("disabled debug logger still emitted traces")
+			}
+		})
+	}
+}
 
 // testDevice constructs an isolated adapter with a deterministic ioctl boundary.
 func testDevice(t *testing.T, ioctl ioctlFunc) *Device {

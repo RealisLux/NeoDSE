@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/RealisLux/NeoDSE/internal/cec"
 	"github.com/RealisLux/NeoDSE/internal/config"
 	"github.com/RealisLux/NeoDSE/internal/instruction"
 	"github.com/RealisLux/NeoDSE/internal/keyderivation"
@@ -56,7 +55,7 @@ type Agent struct {
 	debug                  bool
 	serialMu               sync.Mutex
 	cecMu                  sync.Mutex
-	cecDevice              *cec.Device
+	cecDevice              cecAdapter
 	cecAudioAddress        uint8
 	cecAudioAddressKnown   bool
 	stateMu                sync.RWMutex
