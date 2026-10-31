@@ -239,6 +239,15 @@ func TestControllerUnitProtectsDatabaseKey(t *testing.T) {
 	}
 }
 
+// TestConfinedServiceCoreLimits keeps SELinux-confined services from needing
+// process:setrlimit to lower the hard core limit during credential protection.
+func TestConfinedServiceCoreLimits(t *testing.T) {
+	root := repositoryRoot(t)
+	for _, service := range []string{"server", "transport", "proxy"} {
+		requireFileText(t, root, "systemd/neodse-"+service+".service", "\nLimitCORE=0\n")
+	}
+}
+
 // TestAutomationFilesParseAndUseCurrentRunner verifies YAML syntax and the supported runner baseline.
 func TestAutomationFilesParseAndUseCurrentRunner(t *testing.T) {
 	root := repositoryRoot(t)
@@ -304,7 +313,8 @@ func TestSELinuxRuntimeContract(t *testing.T) {
 		`gen_context(system_u:object_r:neodse_proxy_exec_t,s0)`,
 		`/etc/neodse(/.*)?`,
 		`/var/lib/neodse(/.*)?`,
-		`/run/neodse-server(/.*)?`,
+		// EL substitutes /run with /var/run before file-context lookup.
+		`/var/run/neodse-server(/.*)?`,
 	} {
 		requireFileText(t, root, "selinux/neodse.fc", marker)
 	}

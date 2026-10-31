@@ -8,6 +8,8 @@ Wants=network-online.target
 Type=simple
 User=neodse-transport
 Group=neodse-transport
+# Set the hard limit before SELinux confinement; the process also disables dumping.
+LimitCORE=0
 
 ExecStart=/usr/bin/neodse-transport --config /etc/neodse/transport.yaml
 Restart=on-failure
