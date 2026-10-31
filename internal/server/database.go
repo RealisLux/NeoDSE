@@ -114,12 +114,10 @@ func (s *Server) runSchedules(ctx context.Context, now time.Time) {
 	}
 	var transitions []scheduledTransition
 	var warnings []scheduledWarning
-	warningJobs := make(map[string]struct{})
 	for _, job := range jobs {
 		transitions = append(transitions, dueTransitions(job, now)...)
 		if warning, ok := dueWarning(job, now); job.ReminderEnabled && ok {
 			warnings = append(warnings, warning)
-			warningJobs[warning.job.ID] = struct{}{}
 		}
 	}
 	sort.Slice(warnings, func(i, j int) bool { return warnings[i].when.Before(warnings[j].when) })
@@ -128,12 +126,8 @@ func (s *Server) runSchedules(ctx context.Context, now time.Time) {
 		s.executeScheduledWarning(ctx, warning, now.UTC())
 	}
 	for _, transition := range transitions {
-		// Do not revive a display while its imminent power-off warning is active.
-		if transition.kind == "on" {
-			if _, warningActive := warningJobs[transition.job.ID]; warningActive {
-				continue
-			}
-		}
+		// A reminder must not suppress the configured power-on time, including
+		// schedules whose on/off times are less than five minutes apart.
 		s.executeScheduledTransition(ctx, transition, now.UTC())
 	}
 }

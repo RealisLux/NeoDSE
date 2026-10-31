@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,6 +21,71 @@ import (
 	"github.com/RealisLux/NeoDSE/internal/protocol"
 	"github.com/RealisLux/NeoDSE/internal/store"
 )
+
+// TestScheduledPowerTransitionsRespectShortIntervals verifies reminders never
+// postpone either CEC transition when power-on and power-off are closely spaced.
+func TestScheduledPowerTransitionsRespectShortIntervals(t *testing.T) {
+	for _, reminder := range []bool{false, true} {
+		for _, order := range []string{"on-off", "off-on"} {
+			t.Run(fmt.Sprintf("%s/reminder=%t", order, reminder), func(t *testing.T) {
+				const agentID = "display-01"
+				server := testServerWithAgents(t, Config{}, map[string]string{agentID: ""})
+				ctx := context.Background()
+				start := time.Date(2026, 8, 31, 16, 55, 0, 0, time.Local)
+				job := store.Schedule{ID: agentID, AgentID: agentID, Days: []string{"monday"}, PowerOn: "17:00", PowerOff: "17:02", Enabled: true, ReminderEnabled: reminder}
+				first, second := instruction.DisplayOn, instruction.DisplayOff
+				if order == "off-on" {
+					job.PowerOn, job.PowerOff = job.PowerOff, job.PowerOn
+					first, second = second, first
+				}
+				if err := server.store.UpsertSchedule(ctx, job); err != nil {
+					t.Fatal(err)
+				}
+				var operations []instruction.DisplayOperation
+				var banners []instruction.Command
+				server.sendOverride = func(_ string, frame protocol.Frame) error {
+					if frame.Type != "command" {
+						return nil
+					}
+					var command protocol.Command
+					if err := protocol.Decode(frame.Payload, &command); err != nil {
+						t.Fatal(err)
+					}
+					switch payload := command.Command.Payload().(type) {
+					case instruction.DisplayCommand:
+						operations = append(operations, payload.Operation)
+					case instruction.BannerCommand:
+						banners = append(banners, command.Command)
+					}
+					return nil
+				}
+				for minute := 0; minute <= 8; minute++ {
+					now := start.Add(time.Duration(minute) * time.Minute)
+					server.now = func() time.Time { return now }
+					server.runSchedules(ctx, now)
+					want := 0
+					if minute >= 5 {
+						want = 1
+					}
+					if minute >= 7 {
+						want = 2
+					}
+					if len(operations) != want || want >= 1 && operations[0] != first || want == 2 && operations[1] != second {
+						t.Fatalf("at %s: CEC operations=%v, want %d transitions in order %s", now.Format("15:04"), operations, want, order)
+					}
+					// Re-evaluating the same occurrence must not send it twice.
+					server.runSchedules(ctx, now.Add(30*time.Second))
+					if len(operations) != want {
+						t.Fatalf("duplicate CEC transition at %s: %v", now.Format("15:04"), operations)
+					}
+				}
+				if reminder && len(banners) != 5 || !reminder && len(banners) != 0 {
+					t.Fatalf("reminder=%t banners=%d", reminder, len(banners))
+				}
+			})
+		}
+	}
+}
 
 // TestScheduledEventsAreQueryable verifies generated occurrences and scoped access through the API.
 func TestScheduledEventsAreQueryable(t *testing.T) {
