@@ -140,9 +140,12 @@ func (s *Server) logUnauthenticatedOutcome(r *http.Request, status int) {
 	s.logAPIOutcome(r, "unauthenticated", status, "suppressed", window.suppressed)
 }
 
-// logAPIOutcome emits one redacted security-relevant API outcome through the shared service logger.
-// Successful mutations and denied reads or writes remain visible at the default level.
+// logAPIOutcome emits one redacted security-relevant API outcome through the
+// shared service logger when verbose or debug diagnostics are enabled.
 func (s *Server) logAPIOutcome(r *http.Request, actorID string, status int, extra ...any) {
+	if !s.verbose && !s.debug {
+		return
+	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr

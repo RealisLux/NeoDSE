@@ -432,6 +432,11 @@ Logging goes to journald:
 - `debug`: connection-stage details; the controller currently uses the same
   operation summaries as `verbose`.
 
+The controller's `API audit` records for mutations and denied requests are
+emitted only at `verbose` or `debug`, including authentication failures. Set
+`server.log_level: verbose` or start `neodse-server` with `--verbose` to enable
+them. Requests without a valid token remain rate limited per source address.
+
 For example, after changing agent configuration:
 
 ```bash

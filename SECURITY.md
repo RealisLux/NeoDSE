@@ -16,7 +16,7 @@ identity. Browser state is temporary, under `/run/neodse-ui`.
 
 | Boundary | Controls |
 | --- | --- |
-| Operator API | HTTPS, scoped bearer tokens, optional expiry, hashed token storage and redacted mutation/denial auditing |
+| Operator API | HTTPS, scoped bearer tokens, optional expiry, hashed token storage and redacted mutation/denial auditing at `verbose` or `debug` |
 | Administrator | Global account-management authority, including access grants to any agent; use other roles for scoped delegation. An administrator cannot remove its own access; root on the controller can restore one with `neodse-server recover-admin` |
 | Database at rest | AES-256-XTS encrypts the SQLite file, WAL and journal with a random key; only an AES-256-GCM copy sealed under an Argon2id key from the administrator passphrase is stored. The controller starts locked; root unlocks it over a Unix socket that checks the peer UID |
 | Agent messages | Unique 256-bit pre-shared keys (PSKs), purpose-separated session keys, session IDs, sequences and expiry |

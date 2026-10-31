@@ -39,6 +39,7 @@ func TestAPIDenialLogsRedactedOutcome(t *testing.T) {
 	slog.SetDefault(slog.New(slog.NewTextHandler(&output, nil)))
 	t.Cleanup(func() { slog.SetDefault(original) })
 	server := newServer(Config{}, "test")
+	server.verbose = true
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/agents/display-01/restart", nil)
 	request = request.WithContext(context.WithValue(request.Context(), requestIDContextKey{}, "request-1"))
 	server.logAPIOutcome(request, "account-1", http.StatusForbidden)
@@ -202,34 +203,70 @@ func TestActiveAdministratorCannotRemoveItsOwnAccess(t *testing.T) {
 	}
 }
 
-// TestDefaultAuditRecordsMutationsAndReadDenials exercises middleware at the default log level.
-func TestDefaultAuditRecordsMutationsAndReadDenials(t *testing.T) {
-	server := testServerWithAgents(t, Config{}, nil)
-	_, token := testAPI(t, server)
+// TestAPIAuditLogLevels exercises request logging through configured levels and
+// command-line overrides, including redaction and successful read suppression.
+func TestAPIAuditLogLevels(t *testing.T) {
+	base := testServerWithAgents(t, Config{}, nil)
+	_, token := testAPI(t, base)
 	previous := slog.Default()
 	var output bytes.Buffer
 	slog.SetDefault(slog.New(slog.NewTextHandler(&output, nil)))
 	defer slog.SetDefault(previous)
-	for _, item := range []struct {
-		method        string
-		status        int
-		authenticated bool
-	}{{"POST", 201, true}, {"GET", 403, true}, {"GET", 401, false}} {
-		output.Reset()
-		request := httptest.NewRequest(item.method, "/api/v1/test?secret=content-secret", strings.NewReader("content-secret"))
-		request.Pattern = "/api/v1/test"
-		if item.authenticated {
-			request.Header.Set("Authorization", "Bearer "+token)
-		}
-		response := httptest.NewRecorder()
-		server.authMiddleware(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(item.status) })(response, request)
-		logged := output.String()
-		if !strings.Contains(logged, "API audit") || !strings.Contains(logged, fmt.Sprintf("status=%d", item.status)) {
-			t.Fatalf("missing default audit: %q", logged)
-		}
-		if strings.Contains(logged, token) || strings.Contains(logged, "content-secret") {
-			t.Fatal("audit exposed credentials or content")
-		}
+	for _, mode := range []struct {
+		name  string
+		level string
+		args  []string
+		logs  bool
+	}{
+		{name: "default"},
+		{name: "info", level: "info"},
+		{name: "verbose", level: "verbose", logs: true},
+		{name: "debug", level: "debug", logs: true},
+		{name: "verbose flag", level: "info", args: []string{"--verbose"}, logs: true},
+		{name: "debug flag", level: "info", args: []string{"--debug"}, logs: true},
+	} {
+		t.Run(mode.name, func(t *testing.T) {
+			cfg := Config{}
+			cfg.Server.LogLevel = mode.level
+			options, err := parseServerRunOptions(mode.args)
+			if err != nil {
+				t.Fatal(err)
+			}
+			server := newConfiguredServer(cfg, "test", options)
+			server.store = base.store
+			for _, item := range []struct {
+				method        string
+				status        int
+				authenticated bool
+			}{
+				{"POST", 201, true}, {"POST", 500, true},
+				{"GET", 200, true}, {"HEAD", 200, true},
+				{"GET", 403, true}, {"GET", 401, false},
+			} {
+				output.Reset()
+				request := httptest.NewRequest(item.method, "/api/v1/test?secret=content-secret", strings.NewReader("content-secret"))
+				request.Pattern = "/api/v1/test"
+				if item.authenticated {
+					request.Header.Set("Authorization", "Bearer "+token)
+				}
+				response := httptest.NewRecorder()
+				server.authMiddleware(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(item.status) })(response, request)
+				if response.Code != item.status {
+					t.Fatalf("%s response status=%d, want %d", item.method, response.Code, item.status)
+				}
+				logged := output.String()
+				wantLog := mode.logs && (item.status >= 400 || item.method == "POST")
+				if strings.Contains(logged, "API audit") != wantLog {
+					t.Fatalf("%s status=%d audit=%q, want log=%t", item.method, item.status, logged, wantLog)
+				}
+				if wantLog && !strings.Contains(logged, fmt.Sprintf("status=%d", item.status)) {
+					t.Fatalf("audit missing response status: %q", logged)
+				}
+				if strings.Contains(logged, token) || strings.Contains(logged, "content-secret") {
+					t.Fatal("audit exposed credentials or content")
+				}
+			}
+		})
 	}
 }
 
@@ -237,6 +274,7 @@ func TestDefaultAuditRecordsMutationsAndReadDenials(t *testing.T) {
 // token from flooding the journal while every source and suppression stays visible.
 func TestUnauthenticatedAuditIsRateLimitedPerSource(t *testing.T) {
 	server := testServerWithAgents(t, Config{}, nil)
+	server.verbose = true
 	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 	server.now = func() time.Time { return now }
 	previous := slog.Default()
@@ -270,6 +308,7 @@ func TestUnauthenticatedAuditIsRateLimitedPerSource(t *testing.T) {
 // admits a new source once older windows have expired.
 func TestUnauthenticatedAuditTableEvictsOnlyWhenFull(t *testing.T) {
 	server := testServerWithAgents(t, Config{}, nil)
+	server.verbose = true
 	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 	server.now = func() time.Time { return now }
 	previous := slog.Default()
