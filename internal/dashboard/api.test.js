@@ -98,10 +98,16 @@ test("role controls follow controller capabilities", () => {
     "display/off",
     "sound/info",
     "serial",
+    "banner",
   ])
     assert.equal(canOperate(roles, operation), false);
   assert.equal(canOperate(new Set(["administrator"]), "reboot"), true);
   assert.equal(canOperate(new Set(["system_operator"]), "restart"), true);
+  const alerts = new Set(["alert_operator"]);
+  for (const operation of ["banner", "sound/info", "sound/warning", "sound/critical", "serial"])
+    assert.equal(canOperate(alerts, operation), true);
+  for (const operation of ["playlist", "playlist/reload", "playlist/sync", "display/off", "reboot"])
+    assert.equal(canOperate(alerts, operation), false);
 });
 
 test("empty deliveries never infer success from historical receipts", () => {

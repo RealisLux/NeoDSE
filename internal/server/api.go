@@ -21,7 +21,7 @@ type Role string
 const (
 	RoleViewer         Role = "viewer"
 	RoleContentManager Role = "content_manager"
-	RoleAlertIO        Role = "alert_io_operator"
+	RoleAlertOperator  Role = "alert_operator"
 	RoleCECManager     Role = "cec_manager"
 	RoleSystemOperator Role = "system_operator"
 	RoleAdministrator  Role = "administrator"
@@ -32,7 +32,7 @@ type capability string
 const (
 	capView     capability = "view"
 	capContent  capability = "content"
-	capAlertIO  capability = "alert_io"
+	capAlert    capability = "alert"
 	capCEC      capability = "cec"
 	capSystem   capability = "system"
 	capAccounts capability = "accounts"
@@ -56,8 +56,8 @@ func (p Principal) has(c capability) bool {
 		return len(p.Roles) > 0
 	case capContent:
 		return p.Roles[RoleContentManager]
-	case capAlertIO:
-		return p.Roles[RoleAlertIO]
+	case capAlert:
+		return p.Roles[RoleAlertOperator]
 	case capCEC:
 		return p.Roles[RoleCECManager]
 	case capSystem:

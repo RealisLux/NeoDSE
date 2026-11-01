@@ -18,7 +18,7 @@ import (
 	"github.com/RealisLux/NeoDSE/internal/store"
 )
 
-var validRoles = map[Role]bool{RoleViewer: true, RoleContentManager: true, RoleAlertIO: true, RoleCECManager: true, RoleSystemOperator: true, RoleAdministrator: true}
+var validRoles = map[Role]bool{RoleViewer: true, RoleContentManager: true, RoleAlertOperator: true, RoleCECManager: true, RoleSystemOperator: true, RoleAdministrator: true}
 var errInvalidAccount = errors.New("invalid service account")
 var errBootstrapExists = errors.New("service accounts already exist")
 

@@ -317,7 +317,7 @@ paths:
       summary: Play a notification sound
       description: >-
         Plays the local audio file configured for the `info`, `warning` or `critical` profile on
-        the selected agent. Requires `alert_io_operator` and an online, authenticated agent
+        the selected agent. Requires `alert_operator` and an online, authenticated agent
         within the account's scope. Playback uses the agent's configured host audio output.
       parameters:
         - { $ref: '#/components/parameters/AgentID' }
@@ -332,7 +332,7 @@ paths:
       summary: Send a structured serial peripheral action
       description: >-
         Sends a validated beacon, buzzer, relay or query action to the selected agent's serial
-        peripheral. Requires `alert_io_operator` and an online, authenticated agent within the
+        peripheral. Requires `alert_operator` and an online, authenticated agent within the
         account's scope. Serial access must be enabled and the device must implement NeoDSE's AT
         command protocol; arbitrary serial bytes are unsupported.
       parameters: [ { $ref: '#/components/parameters/AgentID' } ]
@@ -348,7 +348,7 @@ paths:
       summary: Display a transient message banner
       description: >-
         Displays a temporary `info`, `warning` or `critical` banner for 1–300 seconds. Requires
-        `content_manager` and an online, authenticated agent within the account's scope. A new
+        `alert_operator` and an online, authenticated agent within the account's scope. A new
         custom banner replaces the previous one; connection-failure warnings retain visual
         priority.
       parameters: [ { $ref: '#/components/parameters/AgentID' } ]
@@ -450,7 +450,7 @@ paths:
       summary: Play a notification sound on all agents
       description: >-
         Plays each agent's local audio file for the selected notification profile across agents
-        in the account's scope. Requires `alert_io_operator`. Offline targets are rejected in
+        in the account's scope. Requires `alert_operator`. Offline targets are rejected in
         the event outcomes.
       parameters:
         - name: profile
@@ -464,7 +464,7 @@ paths:
       summary: Send a structured serial peripheral action to all agents
       description: >-
         Sends a structured action to each agent's enabled serial peripheral across agents in the
-        account's scope. Requires `alert_io_operator`. Devices must implement NeoDSE's AT
+        account's scope. Requires `alert_operator`. Devices must implement NeoDSE's AT
         command protocol. Offline targets are rejected in the event outcomes.
       requestBody:
         required: true
@@ -478,7 +478,7 @@ paths:
       summary: Display a transient message banner on all agents
       description: >-
         Displays a temporary notification banner across agents in the account's scope. Requires
-        `content_manager`. A new custom banner replaces the previous one; connection-failure
+        `alert_operator`. A new custom banner replaces the previous one; connection-failure
         warnings retain visual priority. Offline targets are rejected in the event outcomes.
       requestBody:
         required: true
@@ -712,7 +712,7 @@ components:
         service_account_id: { type: string }
         roles:
           type: array
-          items: { type: string, enum: [viewer, content_manager, alert_io_operator, cec_manager, system_operator, administrator] }
+          items: { type: string, enum: [viewer, content_manager, alert_operator, cec_manager, system_operator, administrator] }
     APIError:
       type: object
       required: [code, message, request_id]
@@ -725,15 +725,15 @@ components:
       additionalProperties: false
       required: [name, roles]
       properties:
-        name: { type: string, minLength: 1, maxLength: 128, pattern: '^[^\u0000]+$', description: Trimmed UTF-8 name of 1-128 bytes without NUL }
+        name: { type: string, minLength: 1, maxLength: 128, pattern: '^[^\u0000]+$', description: Trimmed UTF-8 name of 1-128 bytes without NUL, example: 'Display operator' }
         description: { type: string, maxLength: 1024 }
         roles:
           type: array
           minItems: 1
           maxItems: 6
           uniqueItems: true
-          description: viewer reads state and schedules; content_manager controls displayed content; alert_io_operator controls notification sounds and serial; cec_manager controls HDMI-CEC power and audio; system_operator controls host lifecycle; administrator has all access and exclusively manages schedule changes and service accounts.
-          items: { type: string, enum: [viewer, content_manager, alert_io_operator, cec_manager, system_operator, administrator] }
+          description: viewer reads state and schedules; content_manager controls playlists, reload, synchronization and proxy revocation; alert_operator controls banners, notification sounds and serial; cec_manager controls HDMI-CEC power and audio; system_operator controls host lifecycle; administrator has all access and exclusively manages schedule changes and service accounts.
+          items: { type: string, enum: [viewer, content_manager, alert_operator, cec_manager, system_operator, administrator] }
         all_agents: { type: boolean, default: false }
         agents:
           type: array
@@ -749,14 +749,14 @@ components:
       required: [id, name, roles, all_agents, agents, disabled, created_at, updated_at]
       properties:
         id: { type: string, readOnly: true }
-        name: { type: string, minLength: 1, maxLength: 128 }
+        name: { type: string, minLength: 1, maxLength: 128, example: 'Display operator' }
         description: { type: string, maxLength: 1024 }
         roles:
           type: array
           minItems: 1
           maxItems: 6
           uniqueItems: true
-          items: { type: string, enum: [viewer, content_manager, alert_io_operator, cec_manager, system_operator, administrator] }
+          items: { type: string, enum: [viewer, content_manager, alert_operator, cec_manager, system_operator, administrator] }
         all_agents: { type: boolean }
         agents:
           type: array

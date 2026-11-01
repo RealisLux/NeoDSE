@@ -541,9 +541,9 @@
         const expected = {
           administrator: [0, 1, 2, 3, 4, 5, 6],
           viewer: [],
-          content_manager: [0, 1],
+          content_manager: [0],
           cec_manager: [3],
-          alert_io_operator: [4, 5],
+          alert_operator: [1, 4, 5],
           system_operator: [6],
         };
         for (const [role, enabled] of Object.entries(expected)) {
@@ -563,7 +563,7 @@
         }
       });
       await test("structured peripheral controls", async () => {
-        await login("alert_io_operator");
+        await login("alert_operator");
         await select("beta");
         $("beacon-period").value = "500";
         document

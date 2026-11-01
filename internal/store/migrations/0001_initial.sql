@@ -56,7 +56,7 @@ CREATE TABLE service_accounts(
 
 CREATE TABLE service_account_roles(
     service_account_id TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('viewer','content_manager','alert_io_operator','cec_manager','system_operator','administrator')),
+    role TEXT NOT NULL CHECK(role IN ('viewer','content_manager','alert_operator','cec_manager','system_operator','administrator')),
     PRIMARY KEY(service_account_id, role),
     FOREIGN KEY(service_account_id) REFERENCES service_accounts(id) ON DELETE CASCADE
 ) STRICT;

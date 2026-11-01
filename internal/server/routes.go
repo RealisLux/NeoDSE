@@ -81,13 +81,13 @@ func (s *Server) registerAgentContentRoutes(mux *http.ServeMux) {
 		http.MethodPost: {capability: capCEC, agentScoped: true, handler: s.displayOperationRoute},
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/{agentId}/sound/{profile}", map[string]apiRoute{
-		http.MethodPost: {capability: capAlertIO, agentScoped: true, handler: s.soundRoute},
+		http.MethodPost: {capability: capAlert, agentScoped: true, handler: s.soundRoute},
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/{agentId}/serial", map[string]apiRoute{
-		http.MethodPost: {capability: capAlertIO, agentScoped: true, handler: s.serialRoute},
+		http.MethodPost: {capability: capAlert, agentScoped: true, handler: s.serialRoute},
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/{agentId}/banner", map[string]apiRoute{
-		http.MethodPost: {capability: capContent, agentScoped: true, handler: s.bannerRoute},
+		http.MethodPost: {capability: capAlert, agentScoped: true, handler: s.bannerRoute},
 	})
 }
 
@@ -110,13 +110,13 @@ func (s *Server) registerBroadcastRoutes(mux *http.ServeMux) {
 		http.MethodPost: {capability: capCEC, broadcast: true, handler: s.broadcastDisplayOperationRoute},
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/broadcast/sound/{profile}", map[string]apiRoute{
-		http.MethodPost: {capability: capAlertIO, broadcast: true, handler: s.broadcastSoundRoute},
+		http.MethodPost: {capability: capAlert, broadcast: true, handler: s.broadcastSoundRoute},
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/broadcast/serial", map[string]apiRoute{
-		http.MethodPost: {capability: capAlertIO, broadcast: true, handler: s.broadcastSerialRoute},
+		http.MethodPost: {capability: capAlert, broadcast: true, handler: s.broadcastSerialRoute},
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/broadcast/banner", map[string]apiRoute{
-		http.MethodPost: {capability: capContent, broadcast: true, handler: s.broadcastBannerRoute},
+		http.MethodPost: {capability: capAlert, broadcast: true, handler: s.broadcastBannerRoute},
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/broadcast/{operation}", map[string]apiRoute{
 		http.MethodPost: {capability: capSystem, broadcast: true, handler: s.broadcastSystemRoute},

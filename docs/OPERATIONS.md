@@ -58,8 +58,8 @@ rotated; they are shown only once. Set expiry dates appropriate to their use.
 | Role | Permissions |
 | --- | --- |
 | `viewer` | Read state, events and schedules |
-| `content_manager` | Playlists, reload, synchronization, banners and proxy revocation |
-| `alert_io_operator` | Sound and serial actions |
+| `content_manager` | Playlists, reload, synchronization and proxy revocation |
+| `alert_operator` | Banners, sound and serial actions |
 | `cec_manager` | Display power and audio |
 | `system_operator` | Restart, reboot and shutdown |
 | `administrator` | All operations, schedule changes and global account management |
@@ -76,7 +76,7 @@ With an administrator token loaded in `neodse_api`, create a scoped operator:
 
 ```bash
 neodse_api --request POST -H 'Content-Type: application/json' \
-  --data '{"name":"Display operator","roles":["content_manager","alert_io_operator","cec_manager"],"all_agents":false,"agents":["display-001"]}' \
+  --data '{"name":"Display operator","roles":["content_manager","alert_operator","cec_manager"],"all_agents":false,"agents":["display-001"]}' \
   https://127.0.0.1:8443/api/v1/service-accounts
 ```
 
@@ -178,7 +178,7 @@ and an account scoped to `display-001`.
 
 ### Display a banner and play a notification
 
-Assign `content_manager` for the banner and `alert_io_operator` for the sound:
+Assign `alert_operator` for both the banner and the sound:
 
 ```bash
 neodse_api --request POST -H 'Content-Type: application/json' \
@@ -211,7 +211,7 @@ neodse_api --request POST \
   https://127.0.0.1:8443/api/v1/agents/display-001/display/on
 ```
 
-Serial actions require `alert_io_operator`, enabled serial configuration and a
+Serial actions require `alert_operator`, enabled serial configuration and a
 device implementing NeoDSE's [AT command protocol](ARCHITECTURE.md#serial-peripheral-protocol).
 The configured `serial.response_timeout_ms` bounds the command write and response
 together. A stalled device reports a failed command; agent shutdown interrupts

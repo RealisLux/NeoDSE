@@ -48,6 +48,6 @@ export function canOperate(roles, path) {
   if (/^(restart|reboot|shutdown)$/.test(path))
     return roles.has("system_operator");
   if (/^display\//.test(path)) return roles.has("cec_manager");
-  if (/^(sound\/|serial$)/.test(path)) return roles.has("alert_io_operator");
+  if (/^(sound\/|serial$|banner$)/.test(path)) return roles.has("alert_operator");
   return roles.has("content_manager");
 }
