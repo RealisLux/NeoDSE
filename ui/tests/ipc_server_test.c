@@ -40,6 +40,8 @@ int __real_openat(int directory, const char* path, int flags, ...);
 int __real_fstat(int fd, struct stat* information);
 int __real_fchmodat(int directory, const char* path, mode_t mode, int flags);
 struct passwd* __real_getpwnam(const char* name);
+int __open_2(const char* path, int flags);
+int __openat_2(int directory, const char* path, int flags);
 
 /* fixture_path redirects only this test's socket into its private temporary directory. */
 static const char* fixture_path(const char* path)
@@ -98,6 +100,14 @@ int __wrap_openat(int directory, const char* path, int flags, ...)
         return -1;
     }
     return __real_openat(directory, path, flags);
+}
+
+/* Clang's glibc fortification uses these symbols for opens without a mode. */
+int __wrap___open_2(const char* path, int flags) { return __wrap_open(path, flags); }
+
+int __wrap___openat_2(int directory, const char* path, int flags)
+{
+    return __wrap_openat(directory, path, flags);
 }
 
 /* __wrap_fstat models an unsafe owner or an unavailable directory metadata lookup. */
@@ -240,6 +250,26 @@ static void test_stale_socket(void)
     close(stale);
     g_assert_true(ipc_start());
     ipc_stop();
+    finish_fixture();
+}
+
+/* Exercise fortified entry points even on hosts whose headers still call open/openat. */
+static void test_fortified_opens(void)
+{
+    prepare_fixture();
+    int directory = __open_2("/run/neodse", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    g_assert_cmpint(directory, >=, 0);
+    g_assert_true(g_file_set_contents(fixture_actual_path, "preserve", -1, NULL));
+    const char* name = strrchr(fixture_socket_path, '/') + 1;
+    int entry = __openat_2(directory, name, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+    g_assert_cmpint(entry, >=, 0);
+    close(entry);
+    fail_socket_lookup = TRUE;
+    g_assert_cmpint(__openat_2(directory, name, O_PATH | O_NOFOLLOW | O_CLOEXEC), ==, -1);
+    g_assert_cmpint(errno, ==, EACCES);
+    fail_socket_lookup = FALSE;
+    close(directory);
+    g_assert_cmpint(unlink(fixture_actual_path), ==, 0);
     finish_fixture();
 }
 
@@ -388,6 +418,7 @@ int main(int argc, char** argv)
     g_test_add_func("/ipc-server/start-stop-blocked-client", test_server_start_stop);
     g_test_add_func("/ipc-server/accept-failure-pauses", test_accept_failure_pauses);
     g_test_add_func("/ipc-server/stale-socket", test_stale_socket);
+    g_test_add_func("/ipc-server/fortified-opens", test_fortified_opens);
     g_test_add_data_func("/ipc-server/refuse-file", "file", test_refuse_existing_entry);
     g_test_add_data_func("/ipc-server/refuse-symlink", "symlink", test_refuse_existing_entry);
     g_test_add_data_func("/ipc-server/refuse-directory", "directory", test_refuse_existing_entry);
