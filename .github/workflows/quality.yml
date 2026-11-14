@@ -29,7 +29,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.27.3'
+          go-version: '1.27.4'
           check-latest: false
           cache: true
           cache-dependency-path: go.sum
@@ -44,12 +44,18 @@ jobs:
         uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
         with:
           repo-checkout: false
-          go-version-input: '1.27.3'
+          go-version-input: '1.27.4'
           check-latest: false
           # The initial setup-go owns the shared module/build cache. Restoring
           # it again over populated Go module directories causes tar collisions.
           cache: false
           output-file: security.log
+      - name: Show Go source vulnerability report
+        if: always()
+        run: |
+          if [[ -f security.log ]]; then
+            cat security.log
+          fi
       - name: Scan NeoDSE runtime binaries
         run: make verify-binaries BUILD_DIR="${RUNNER_TEMP}/neodse-build" VERSION=1.0.0-ci 2>&1 | tee binary-security.log
       - name: Require complete unit test evidence
@@ -125,7 +131,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.27.3'
+          go-version: '1.27.4'
           check-latest: false
           cache: true
           cache-dependency-path: go.sum

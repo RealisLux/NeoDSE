@@ -8,7 +8,7 @@ For an overview, read the [README](../README.md).
 
 ## Prerequisites
 
-Install **Go 1.27.3** from [Go downloads](https://go.dev/dl/) and verify the archive
+Install **Go 1.27.4** from [Go downloads](https://go.dev/dl/) and verify the archive
 checksum. Put its `bin` directory first on `PATH`, then check both `go version`
 and `GOTOOLCHAIN=local go version`. Make and CI disable automatic toolchain
 switching: a plain `go version` can report a downloaded toolchain even when the
@@ -278,6 +278,11 @@ same installed govulncheck scans the five built runtime binaries. Runtime builds
 retain symbols for precise attribution. `.golangci.yml` preserves Staticcheck
 and production-only gosec analysis; it does not enable unrelated linter presets.
 
+The source scan saves its text report to `security.log`; the next step prints
+it even when the scan fails, and the coverage artifact retains it. Exit code 3
+means govulncheck found reachable vulnerabilities. For standard-library findings,
+update Go in the module and workflows to the fixed version named in the report.
+
 Release scanner versions are explicit inputs to their Actions. Keep package
 identity (`SYFT_SOURCE_NAME`), target distribution (`GRYPE_DISTRO`), all fix
 states and the high-severity failure threshold when changing these steps.
@@ -369,7 +374,7 @@ Install the reviewed stable Go release and confirm `GOTOOLCHAIN=local go version
 Set that version in the runtime module:
 
 ```bash
-version=1.27.3 # replace with the reviewed release
+version=1.27.4 # replace with the reviewed release
 go mod edit -go="${version}"
 ```
 
