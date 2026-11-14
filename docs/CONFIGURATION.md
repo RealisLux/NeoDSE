@@ -204,7 +204,8 @@ the defaults below.
 | `NEODSE_FRIENDLY_NAME_SCALE` | `1.0` | Top-left display-name scale |
 | `NEODSE_CLOCK_SCALE` | `1.0` | Top-right clock scale |
 | `NEODSE_BANNER_SCALE` | `1.0` | Notification-banner scale |
-| `NEODSE_BORDER_WIDTH` | `12` | Screen-border width in GTK logical pixels, integer `1`–`64`; invalid values use the default. Colors follow the banner palette: info blue, warning orange, critical red |
+| `NEODSE_BORDER_WIDTH` | `6` | Screen-border width in GTK logical pixels, integer `1`–`64`; invalid values use the default. Colors follow the banner palette: info blue, warning orange, critical red |
+| `NEODSE_BORDER_FLASH` | `off` | Set to `on` to flash the screen border: 500 ms visible, 500 ms hidden. Each new request starts visible; expiry and waiting-screen visibility follow the banner rules. Invalid values use `off` |
 | `NEODSE_UI_ZOOM` | `1.0` | WebKit content scale |
 | `NEODSE_UI_LOGO_ANIMATION` | `show` | Animated N; `hide` leaves the completed N visible |
 | `NEODSE_UI_STATUS_LOGO` | `show` | Static colored N indicating connection health during playlist playback |

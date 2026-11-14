@@ -111,7 +111,7 @@ ui-test:
 	$(CC) $(UI_TEST_CFLAGS) -DG_DISABLE_CAST_CHECKS ui/tests/border_test.c ui/border.c \
 		-o "$(BUILD_DIR)/neodse-ui-border-test" \
 		$(call system_cflags,gtk4 webkitgtk-6.0) $$(pkg-config --libs gtk4) \
-		-Wl,--wrap=g_timeout_add_seconds,--wrap=g_source_remove \
+		-Wl,--wrap=g_timeout_add_seconds,--wrap=g_timeout_add,--wrap=g_source_remove \
 		-pie -Wl,-z,relro,-z,now
 	"$(BUILD_DIR)/neodse-ui-border-test"
 
@@ -149,7 +149,7 @@ ui-test-sanitize:
 	$(CC) $(UI_SANITIZER_CFLAGS) -DG_DISABLE_CAST_CHECKS ui/tests/border_test.c ui/border.c \
 		-o "$(BUILD_DIR)/neodse-ui-border-test-sanitize" \
 		$(call system_cflags,gtk4 webkitgtk-6.0) $$(pkg-config --libs gtk4) \
-		-Wl,--wrap=g_timeout_add_seconds,--wrap=g_source_remove \
+		-Wl,--wrap=g_timeout_add_seconds,--wrap=g_timeout_add,--wrap=g_source_remove \
 		-fsanitize=address,undefined -Wl,-z,relro,-z,now
 	ASAN_OPTIONS=$(SANITIZER_OPTIONS) UBSAN_OPTIONS=$(UNDEFINED_SANITIZER_OPTIONS) \
 		"$(BUILD_DIR)/neodse-ui-border-test-sanitize"

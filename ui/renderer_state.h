@@ -34,6 +34,9 @@ typedef struct
     GtkWidget* notification_banner;
     GtkWidget* border;
     guint border_timer;
+    guint border_flash_timer;
+    gboolean border_flash_enabled;
+    gboolean border_flash_visible;
     int border_width;
     GdkRGBA border_color;
     GtkWidget* waiting_logo;

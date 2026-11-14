@@ -217,7 +217,13 @@ resizing the page or intercepting input, stays visible across playlist changes,
 and follows the banner's waiting-screen setting: it is hidden unless
 `NEODSE_UI_WAITING_OVERLAYS=show`. Its timer continues while hidden.
 A UI restart clears it. Set `NEODSE_BORDER_WIDTH` in `display.env` to adjust its
-width. Use `POST /api/v1/agents/broadcast/border` with the same payload to target
+width. Set `NEODSE_BORDER_FLASH=on` to alternate 500 ms visible and 500 ms hidden;
+the default is a steady border (`off`). Each new request starts visible and
+restarts the expiry timer. Flashing stops when the request expires; both timers
+continue while the waiting-screen setting hides the border. Restart the UI after
+editing `display.env`.
+
+Use `POST /api/v1/agents/broadcast/border` with the same payload to target
 all agents in the account's scope. These are transient commands requiring online
 agents; check the returned event for delivery results.
 

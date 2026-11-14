@@ -7,6 +7,8 @@
 
 #include "renderer_state.h"
 
+#define BORDER_FLASH_INTERVAL_MS 500
+
 /* draw_border fills only the screen edges, leaving content geometry unchanged. */
 static void draw_border(
     GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data)
@@ -23,11 +25,11 @@ static void draw_border(
     cairo_fill(cr);
 }
 
-/* create_border reads the local width setting once at UI startup. */
+/* create_border reads local appearance settings once at UI startup. */
 void create_border(GtkOverlay* overlay)
 {
     RendererState* state = renderer_state();
-    state->border_width = 12;
+    state->border_width = 6;
     const char* configured = g_getenv("NEODSE_BORDER_WIDTH");
     if (configured != NULL)
     {
@@ -42,6 +44,13 @@ void create_border(GtkOverlay* overlay)
             g_printerr("[UI] ! Invalid NEODSE_BORDER_WIDTH; using default\n");
         }
     }
+    configured = g_getenv("NEODSE_BORDER_FLASH");
+    state->border_flash_enabled = g_strcmp0(configured, "on") == 0;
+    if (configured != NULL && g_strcmp0(configured, "off") != 0 && !state->border_flash_enabled)
+    {
+        g_printerr("[UI] ! Invalid NEODSE_BORDER_FLASH; using off\n");
+    }
+    state->border_flash_visible = TRUE;
     state->border = gtk_drawing_area_new();
     gtk_widget_set_can_target(state->border, FALSE);
     gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(state->border), draw_border, NULL, NULL);
@@ -60,7 +69,17 @@ void update_border(void)
     GtkWidget* screen
         = state->stack != NULL ? gtk_stack_get_visible_child(GTK_STACK(state->stack)) : NULL;
     gboolean show_overlays = state->show_overlays_on_waiting || screen != state->waiting_view;
-    gtk_widget_set_visible(state->border, state->border_timer != 0 && show_overlays);
+    gboolean lit = !state->border_flash_enabled || state->border_flash_visible;
+    gtk_widget_set_visible(state->border, state->border_timer != 0 && show_overlays && lit);
+}
+
+/* flash_border toggles visibility without changing the request's expiry. */
+static gboolean flash_border(gpointer user_data)
+{
+    (void)user_data;
+    renderer_state()->border_flash_visible = !renderer_state()->border_flash_visible;
+    update_border();
+    return G_SOURCE_CONTINUE;
 }
 
 /* expire_border hides the highlight without disturbing other overlays. */
@@ -68,11 +87,12 @@ static gboolean expire_border(gpointer user_data)
 {
     (void)user_data;
     renderer_state()->border_timer = 0;
+    destroy_border();
     update_border();
     return G_SOURCE_REMOVE;
 }
 
-/* destroy_border removes its source before renderer state is released. */
+/* destroy_border removes both sources before replacement or renderer teardown. */
 void destroy_border(void)
 {
     if (renderer_state()->border_timer != 0)
@@ -80,6 +100,12 @@ void destroy_border(void)
         g_source_remove(renderer_state()->border_timer);
         renderer_state()->border_timer = 0;
     }
+    if (renderer_state()->border_flash_timer != 0)
+    {
+        g_source_remove(renderer_state()->border_flash_timer);
+        renderer_state()->border_flash_timer = 0;
+    }
+    renderer_state()->border_flash_visible = TRUE;
 }
 
 /* webview_show_border replaces both the color and expiry on the GTK owner thread. */
@@ -100,5 +126,9 @@ void webview_show_border(const char* severity, guint duration_seconds)
     gdk_rgba_parse(&state->border_color, color);
     gtk_widget_queue_draw(state->border);
     state->border_timer = g_timeout_add_seconds(duration_seconds, expire_border, NULL);
+    if (state->border_flash_enabled)
+    {
+        state->border_flash_timer = g_timeout_add(BORDER_FLASH_INTERVAL_MS, flash_border, NULL);
+    }
     update_border();
 }

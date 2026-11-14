@@ -15,8 +15,11 @@ static GtkWidget* visible_screen;
 static gboolean visible;
 static GtkDrawingAreaDrawFunc draw;
 static GSourceFunc expiry;
+static GSourceFunc flash;
 static guint next_timer;
 static guint removed_timer;
+static guint removed_timers[64];
+static guint removed_count;
 
 RendererState* renderer_state(void) { return &state; }
 GtkWidget* gtk_drawing_area_new(void) { return (GtkWidget*)&widget; }
@@ -57,10 +60,31 @@ guint __wrap_g_timeout_add_seconds(guint interval, GSourceFunc function, gpointe
     expiry = function;
     return ++next_timer;
 }
+guint __wrap_g_timeout_add(guint interval, GSourceFunc function, gpointer data)
+{
+    (void)data;
+    g_assert_cmpuint(interval, ==, 500);
+    flash = function;
+    return ++next_timer;
+}
 gboolean __wrap_g_source_remove(guint tag)
 {
     removed_timer = tag;
+    g_assert_cmpuint(removed_count, <, G_N_ELEMENTS(removed_timers));
+    removed_timers[removed_count++] = tag;
     return TRUE;
+}
+
+static gboolean was_removed(guint tag)
+{
+    for (guint i = 0; i < removed_count; i++)
+    {
+        if (removed_timers[i] == tag)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 /* assert_pixels checks all four edges and the transparent page interior. */
@@ -88,11 +112,14 @@ static void assert_pixels(int width, int height, guint32 color)
 static void test_border_lifecycle(void)
 {
     g_unsetenv("NEODSE_BORDER_WIDTH");
+    g_unsetenv("NEODSE_BORDER_FLASH");
     create_border(NULL);
     g_assert_false(visible);
-    g_assert_cmpint(state.border_width, ==, 12);
+    g_assert_cmpint(state.border_width, ==, 6);
+    g_assert_false(state.border_flash_enabled);
     webview_show_border("info", 1);
     g_assert_true(visible);
+    g_assert_cmpuint(state.border_flash_timer, ==, 0);
     assert_pixels(100, 80, 0xff1565c0);
     guint old_timer = state.border_timer;
     webview_show_border("warning", 300);
@@ -139,6 +166,78 @@ static void test_waiting_visibility(void)
     g_assert_cmpuint(state.border_timer, ==, 0);
 }
 
+/* test_flashing checks phase, replacement, waiting visibility, expiry and teardown. */
+static void test_flashing(void)
+{
+    g_setenv("NEODSE_BORDER_FLASH", "on", TRUE);
+    create_border(NULL);
+    g_unsetenv("NEODSE_BORDER_FLASH");
+    g_assert_true(state.border_flash_enabled);
+    webview_show_border("warning", 30);
+    g_assert_true(visible);
+    guint original_expiry = state.border_timer;
+    guint original_flash = state.border_flash_timer;
+    g_assert_cmpuint(original_flash, !=, 0);
+    g_assert_cmpint(flash(NULL), ==, G_SOURCE_CONTINUE);
+    g_assert_false(visible);
+    update_border();
+    g_assert_false(visible);
+    g_assert_cmpuint(state.border_timer, ==, original_expiry);
+    visible_screen = state.waiting_view;
+    g_assert_cmpint(flash(NULL), ==, G_SOURCE_CONTINUE);
+    g_assert_false(visible);
+    state.show_overlays_on_waiting = TRUE;
+    update_border();
+    g_assert_true(visible);
+    g_assert_cmpint(flash(NULL), ==, G_SOURCE_CONTINUE);
+    g_assert_false(visible);
+    state.show_overlays_on_waiting = FALSE;
+    visible_screen = (GtkWidget*)&playlist_marker;
+    webview_show_border("critical", 60);
+    g_assert_true(visible);
+    assert_pixels(100, 80, 0xffc62828);
+    g_assert_true(was_removed(original_expiry));
+    g_assert_true(was_removed(original_flash));
+    g_assert_cmpuint(state.border_timer, !=, original_expiry);
+    g_assert_cmpuint(state.border_flash_timer, !=, original_flash);
+    original_flash = state.border_flash_timer;
+    g_assert_cmpint(expiry(NULL), ==, G_SOURCE_REMOVE);
+    g_assert_false(visible);
+    g_assert_cmpuint(state.border_timer, ==, 0);
+    g_assert_cmpuint(state.border_flash_timer, ==, 0);
+    g_assert_true(was_removed(original_flash));
+    webview_show_border("info", 30);
+    original_expiry = state.border_timer;
+    original_flash = state.border_flash_timer;
+    destroy_border();
+    g_assert_cmpuint(state.border_timer, ==, 0);
+    g_assert_cmpuint(state.border_flash_timer, ==, 0);
+    g_assert_true(was_removed(original_expiry));
+    g_assert_true(was_removed(original_flash));
+}
+
+static void test_flash_setting(void)
+{
+    const char* invalid[] = { "", "yes", "true", "1", "show", "ON" };
+    for (guint i = 0; i < G_N_ELEMENTS(invalid); i++)
+    {
+        g_setenv("NEODSE_BORDER_FLASH", invalid[i], TRUE);
+        create_border(NULL);
+        g_assert_false(state.border_flash_enabled);
+    }
+    g_setenv("NEODSE_BORDER_FLASH", "on", TRUE);
+    create_border(NULL);
+    g_assert_true(state.border_flash_enabled);
+    g_setenv("NEODSE_BORDER_FLASH", "off", TRUE);
+    create_border(NULL);
+    g_assert_false(state.border_flash_enabled);
+    webview_show_border("info", 1);
+    g_assert_true(visible);
+    g_assert_cmpuint(state.border_flash_timer, ==, 0);
+    destroy_border();
+    g_unsetenv("NEODSE_BORDER_FLASH");
+}
+
 static void test_border_width(void)
 {
     const char* invalid[] = { "", "0", "65", "-1", "2.5", "12px", "99999999999999999999" };
@@ -146,7 +245,7 @@ static void test_border_width(void)
     {
         g_setenv("NEODSE_BORDER_WIDTH", invalid[i], TRUE);
         create_border(NULL);
-        g_assert_cmpint(state.border_width, ==, 12);
+        g_assert_cmpint(state.border_width, ==, 6);
     }
     g_setenv("NEODSE_BORDER_WIDTH", "4", TRUE);
     create_border(NULL);
@@ -165,6 +264,8 @@ int main(int argc, char** argv)
     visible_screen = (GtkWidget*)&playlist_marker;
     g_test_add_func("/border/lifecycle", test_border_lifecycle);
     g_test_add_func("/border/waiting-visibility", test_waiting_visibility);
+    g_test_add_func("/border/flashing", test_flashing);
+    g_test_add_func("/border/flash-setting", test_flash_setting);
     g_test_add_func("/border/width", test_border_width);
     return g_test_run();
 }
