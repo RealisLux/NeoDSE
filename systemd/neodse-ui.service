@@ -19,10 +19,11 @@ Restart=always
 RestartSec=15s
 OOMPolicy=stop
 
-# The six-view playlist ceiling requires headroom for WebKit network, GPU,
-# renderer, and media subprocesses while bounding hostile-content growth.
-MemoryHigh=1536M
-MemoryMax=2G
+# Scale the six-view WebKit budget with host RAM; low fixed MemoryHigh values
+# cause sustained reclaim and display stalls before the hard limit is reached.
+# Together with Weston's 15% cap, leave 15% for the OS and control agent.
+MemoryHigh=60%
+MemoryMax=70%
 TasksMax=384
 
 # Compatibility: JavaScriptCore and graphics drivers require executable

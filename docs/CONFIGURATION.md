@@ -161,6 +161,48 @@ If the graphics driver misrenders, run `sudo systemctl edit neodse-ui.service`,
 add `PrivateDevices=true` under `[Service]` and restart the service: the
 renderer then draws on the CPU.
 
+### Display memory limits
+
+The display services use percentages of installed physical RAM so their budgets
+grow with the host. The UI budget covers GTK and all WebKit subprocesses,
+including the six playlist views; Weston has a separate compositor/DRM/VNC budget.
+
+| Service | `MemoryHigh` (throttling) | `MemoryMax` (hard limit) |
+| --- | --- | --- |
+| `neodse-ui.service` | 60% | 70% |
+| `neodse-weston.service` | 10% | 15% |
+
+On a 4 GiB display these hard limits are about 2.8 GiB and 0.6 GiB; on an 8 GiB
+display they are about 5.6 GiB and 1.2 GiB. The combined caps budget 15% for the
+OS and agent. This is a starting allocation, not a reservation or a measured
+capacity guarantee; parent slice limits can further reduce the effective limits.
+
+Exceeding `MemoryHigh` forces reclaim and throttles processes. A threshold below
+the working set can cause progressive slowdown and apparent freezes without an
+OOM kill or service restart. Raising only `MemoryMax` leaves that throttling in
+place. See [systemd resource control](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html).
+
+Check both services during a representative full-playlist run, including live
+view, at the deployed resolution:
+
+```sh
+systemctl show neodse-ui.service neodse-weston.service \
+  -p MemoryCurrent -p MemoryPeak -p EffectiveMemoryHigh -p EffectiveMemoryMax \
+  -p ControlGroup
+```
+
+On cgroup v2, inspect `memory.events` and `memory.pressure` under each reported
+`ControlGroup` path in `/sys/fs/cgroup`. Increasing `high` counts indicate
+throttling; `oom`/`oom_kill` counts indicate allocation failures or killed
+processes. Tune both thresholds with `sudo systemctl edit SERVICE` using a
+`[Service]` section, keeping headroom above measured peak usage and sufficient
+RAM for the rest of the host. After changing units, apply them with:
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl restart neodse-weston.service neodse-ui.service
+```
+
 ### Display configuration file
 
 Weston and the UI read `/etc/neodse/display.env` through systemd's

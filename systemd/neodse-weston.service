@@ -41,10 +41,10 @@ RestartSec=15s
 OOMPolicy=stop
 LimitCORE=0
 
-# Weston has no content-process fan-out; this allowance covers DRM buffers,
-# compositor threads, and reviewed graphics-driver overhead.
-MemoryHigh=256M
-MemoryMax=384M
+# Scale compositor and DRM/VNC buffer headroom with host RAM to avoid reclaim
+# stalls. Combined with the UI's 70% cap, budget 15% for the OS and agent.
+MemoryHigh=10%
+MemoryMax=15%
 TasksMax=128
 
 # Compatibility: graphics-driver shader compilation may require executable

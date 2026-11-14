@@ -521,14 +521,14 @@ func TestRendererServicesHaveFiniteResourceLimits(t *testing.T) {
 	root := repositoryRoot(t)
 	for relative, markers := range map[string][]string{
 		"systemd/neodse-ui.service": {
-			"MemoryHigh=1536M", "MemoryMax=2G", "TasksMax=384", "OOMPolicy=stop",
+			"MemoryHigh=60%", "MemoryMax=70%", "TasksMax=384", "OOMPolicy=stop",
 			"RuntimeDirectoryPreserve=yes",
 			"MemoryDenyWriteExecute= and RestrictNamespaces= must remain unset",
 			"and RestrictSUIDSGID= must remain unset",
 			"DevicePolicy=closed", "DeviceAllow=char-drm rw",
 		},
 		"systemd/neodse-weston.service": {
-			"MemoryHigh=256M", "MemoryMax=384M", "TasksMax=128", "OOMPolicy=stop",
+			"MemoryHigh=10%", "MemoryMax=15%", "TasksMax=128", "OOMPolicy=stop",
 			"RuntimeDirectoryPreserve=yes",
 			"MemoryDenyWriteExecute= must remain unset",
 		},
