@@ -3,8 +3,8 @@ Supplemental notices for NeoDSE's embedded Swagger UI
 These notices supplement the unchanged upstream distribution files.
 Each component retains its own license and copyright notices.
 
-Swagger UI 5.33.3 - upstream NOTICE
-Source: https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.33.3.tgz
+Swagger UI 5.35.0 - upstream NOTICE
+Source: https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.35.0.tgz
 Archive member: package/NOTICE
 NOTICE SHA-256: 0d20d1adef18aee3f40dd258172155521ce702ac445cb5f7b7d60ed32dad2fb2
 
@@ -12,7 +12,7 @@ swagger-ui
 Copyright 2020-2021 SmartBear Software Inc.
 
 ieee754 1.2.1 - BSD-3-Clause
-The Swagger UI 5.33.3 lockfile selects this version, and its bundle source
+The Swagger UI 5.35.0 lockfile selects this version, and its bundle source
 map identifies node_modules/ieee754/index.js.
 Source: https://registry.npmjs.org/ieee754/-/ieee754-1.2.1.tgz
 Archive member: package/LICENSE
