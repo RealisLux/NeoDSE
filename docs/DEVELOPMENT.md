@@ -213,7 +213,18 @@ and package, and review AVC denials. Never accept generated `audit2allow` rules
 without inspecting each requested access. See [deployment](DEPLOYMENT.md#install)
 and the [release checklist](RELEASE.md).
 
-## Demo animation
+## Documentation illustrations
+
+Regenerate the API route map with Python's standard library:
+
+```bash
+python3 scripts/render-api-routes.py
+```
+
+The generator reads methods and capabilities from `internal/server/routes.go`
+and checks that every registered operation appears exactly once. Update its
+presentation groups when adding or removing routes, and keep the descriptions
+aligned with `internal/swagger/openapi.yaml`.
 
 The README GIF is a silent illustration built from the shipped logo animations
 and the SVG scene in [render-demo.py](../scripts/render-demo.py). To regenerate
@@ -224,8 +235,10 @@ python3 scripts/render-demo.py --preview-dir build/demo
 ```
 
 The preview directory contains selected SVG/PNG frames. Keep the timeline aligned
-with the waiting screen, playlist and overlay code in `ui/`. Banners, sound and
-serial lights are separate per-display commands; light-off is explicit.
+with the waiting screen, playlist and overlay code in `ui/`. Banners, screen
+borders, sound and the optional external beacon are separate per-display
+commands. Banners and borders expire independently; beacon-off is explicit and
+requires a compatible serial controller.
 
 ## Dependencies
 

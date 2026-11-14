@@ -10,11 +10,12 @@ services.
 
 [Get started](#get-started) · [Documentation](#documentation) · [Releases](https://github.com/RealisLux/NeoDSE/releases)
 
-![Display-management example: three displays start independently with blue then green connection logos and begin their playlists at one shared time, rotate pages in step, show individual and broadcast banners below persistent display names and clocks with sound cues and amber light strips, keep playing while one display's status N turns red during a network loss, and follow a screen-power schedule with a reminder banner.](neodse-display-management.gif)
+![Display-management example: three displays start independently with blue then green connection logos and begin their playlists at one shared time, rotate pages in step, show individual banners and severity-colored screen borders with sound cues and an optional external rotating beacon beside the screens, receive broadcast banners, keep playing while one display's status N turns red during a network loss, and follow a screen-power schedule with a reminder banner.](neodse-display-management.gif)
 
-*The animation illustrates shared display management in spaces such as offices,
-reception areas and other venues. Sound is shown visually; warning lights need a
-compatible serial controller.* See the [example request flow](neodse-overview.svg).
+*The animation shows an example of a possible integration in a monitoring/supervision
+context. An administrator-provided script or webhook maps monitoring alerts to
+NeoDSE API requests. Sound is shown visually; the optional external beacon needs
+a compatible serial controller.* See the [example request flow](neodse-overview.svg).
 
 ## Why choose NeoDSE?
 
@@ -147,6 +148,10 @@ or API within their assigned roles and display scopes. One person can do both.
 
 The API reference is at `https://127.0.0.1:8443/docs/` after deployment.
 Its source is [openapi.yaml](internal/swagger/openapi.yaml).
+
+## AI
+
+AI tools assist with parts of NeoDSE's development, documentation and illustrations. Maintainers remain responsible for project decisions and accepted changes.
 
 ## License
 

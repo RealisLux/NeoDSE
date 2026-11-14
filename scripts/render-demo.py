@@ -6,8 +6,8 @@
 
 """Render the silent display-management demo with FFmpeg's librsvg decoder.
 
-The scene follows unsynchronized startup, a shared playlist start time, alerts,
-a broadcast, one display's link loss and screen-power behavior.
+The scene follows unsynchronized startup, a shared playlist start time, banners,
+screen borders, an optional external beacon, a broadcast, link loss and screen power.
 Run from any directory; --preview-dir also saves selected SVG/PNG review frames.
 """
 
@@ -32,15 +32,16 @@ BANNER_GAP = 6
 # authenticated); only the playlist start time is shared, as in the renderer.
 STARTUP = ((0.0, 2.8), (1.4, 5.4), (3.0, 6.6))
 PLAYLIST_START, ROTATION = 8.0, 4.0
-# Each banner, serial light and sound is a separate command.
+# Each banner, border, serial beacon and sound is a separate command.
 ALERTS = (
     {"start": 16.0, "end": 23.0, "severity": "warning", "message": "Link congestion",
-     "light": (16.2, 24.0), "sound": (16.4, 17.12)},
+     "border": (16.1, 24.1), "sound": (16.4, 17.12)},
     {"start": 19.5, "end": 26.0, "severity": "critical", "message": "Database latency",
-     "light": (19.7, 27.0), "sound": (19.9, 20.98)},
+     "border": (19.6, 27.6), "sound": (19.9, 20.98)},
     {"start": 23.0, "end": 28.0, "severity": "info", "message": "Deployment in progress",
-     "light": (23.2, 29.0), "sound": (23.4, 23.95)},
+     "border": (23.1, 29.1), "sound": (23.4, 23.95)},
 )
+BEACON = {"display": 1, "active": (19.7, 27.0)}
 BROADCAST = {"start": 30.5, "end": 35.5, "severity": "info",
              "message": "Maintenance tonight at 22:00", "sound": (30.7, 31.25)}
 # The loaded pages keep rotating; the status N turns red once the loss is detected.
@@ -95,12 +96,6 @@ def _image(x, y, width, height, uri):
 def _during(t, window):
     """Test a half-open time interval for independently timed outputs."""
     return window[0] <= t < window[1]
-
-
-def _light_on(t, alert):
-    """Blink an amber serial light at 1 Hz and 50 percent duty cycle."""
-    return (_during(t, alert["light"])
-            and int((t - alert["light"][0] + 1e-9) * 2) % 2 == 0)
 
 
 def _link_down(display, t):
@@ -164,7 +159,7 @@ def _room():
 
 def _integration(t):
     """Show the administrator-supplied monitoring-to-API adapter."""
-    active = _during(t, (ALERTS[0]["start"], ALERTS[-1]["light"][1])) or _during(
+    active = _during(t, (ALERTS[0]["start"], ALERTS[-1]["border"][1])) or _during(
         t, (BROADCAST["start"], BROADCAST["end"]))
     accent = "#ab92eb" if active else "#8da7c4"
     out = [_text(30, 124, "MONITORING → API", 12, "#b9cee4", 700)]
@@ -185,7 +180,7 @@ def _integration(t):
     if _during(t, (BROADCAST["start"], BROADCAST["end"])):
         lines = ("One broadcast request", "Same banner and sound everywhere")
     else:
-        lines = ("Separate requests per display", "Banner · Serial light · Sound")
+        lines = ("Separate requests per display", "Banner · Border · Sound · Serial")
     out += [_text(135, 516, lines[0], 11, "#c3d4e8", 500, "middle"),
             _text(135, 538, lines[1], 11, "#8fa8c3", 400, "middle")]
     return "".join(out)
@@ -288,22 +283,17 @@ def _waiting_logo(display, t, logos):
 
 
 def _monitor(display, t, logos):
-    """Compose one physical monitor, its screen, serial strip and speaker."""
-    x, y, outer_width = 282 + display * 322, 200, SCREEN_WIDTH + 16
-    screen_x, screen_y, width, height = x + 8, y + 11, SCREEN_WIDTH, SCREEN_HEIGHT
-    outer_height = height + 28
+    """Compose a monitor with an on-screen border and its own speaker."""
+    bezel = 6
+    x, y = 284 + display * 322, 205
+    screen_x, screen_y, width, height = x + bezel, y + bezel, SCREEN_WIDTH, SCREEN_HEIGHT
+    outer_width, outer_height = width + 2 * bezel, height + 2 * bezel
     alert = ALERTS[display]
     banner = _active_banner(display, t)
     power_off = POWER_OFF <= t < POWER_ON
-    out = [_rect(x - 4, y + 5, outer_width + 8, outer_height + 1, "#091322", 5),
+    out = [_rect(x - 3, y + 3, outer_width + 6, outer_height, "#091322", 5),
            _rect(x, y, outer_width, outer_height, "#111e2d", 5, "#64788f"),
            _rect(screen_x - 1, screen_y - 1, width + 2, height + 2, "#000", 2)]
-    light = _light_on(t, alert)
-    out.append(_rect(x + 14, y + 4, outer_width - 28, 3,
-                     "#ffb347" if light else "#3d3526", 1))
-    if light:
-        out.append(_rect(x + 13, y + 2, outer_width - 26, 7, "#ffb347", 2,
-                         extra='fill-opacity=".13"'))
     if not power_off:
         if t < PLAYLIST_START:
             out += [_rect(screen_x, screen_y, width, height, "#000"),
@@ -314,6 +304,11 @@ def _monitor(display, t, logos):
             page = pages[int((t - PLAYLIST_START) / ROTATION) % len(pages)]
             out.append(_dashboard(screen_x, screen_y, width, height, page,
                                   display, t, logos, banner))
+        if _during(t, alert["border"]):
+            # Draw inside all four screen edges, above the page and overlays.
+            out.append(_rect(screen_x + 1.5, screen_y + 1.5, width - 3, height - 3,
+                             "none", stroke=BANNER_COLORS[alert["severity"]],
+                             extra='stroke-width="3"'))
     sound = _during(t, alert["sound"]) or _during(t, BROADCAST["sound"])
     out.append(_speaker(x + outer_width / 2, y + outer_height + 5, sound, t))
     labels = ("SINGLE PAGE", "THREE-PAGE ROTATION", "TWO-PAGE ROTATION")
@@ -322,6 +317,34 @@ def _monitor(display, t, logos):
         label, color = "NETWORK LINK LOST", "#ed6464"
     out.append(_text(x + outer_width / 2, y + outer_height + 33,
                      f"DISPLAY {display + 1:02} · {label}", 10.5, color, 700, "middle"))
+    return "".join(out)
+
+
+def _external_beacon(t):
+    """Illustrate one optional rotating beacon through a compatible serial adapter."""
+    active = _during(t, BEACON["active"])
+    x, y = 866, 531
+    color = "#ffb347" if active else "#76522c"
+    # The external hardware is separate from the monitor and its screen border.
+    source = 282 + BEACON["display"] * 322 + SCREEN_WIDTH + 4
+    out = [f'<path d="M{source:g} 379V481H812v32M839 531h8" fill="none" '
+           'stroke="#64788f" stroke-width="1.25" stroke-dasharray="4 5" '
+           'stroke-opacity=".65"/>',
+           _rect(785, 513, 54, 35, "#1a2d44", 5, "#64788f"),
+           _text(812, 527, "SERIAL", 8, "#c3d4e8", 700, "middle"),
+           _text(812, 539, "ADAPTER", 8, "#a4bdd6", 500, "middle"),
+           f'<path d="M{x-19} {y+16}v-25a19 19 0 0 1 38 0v25Z" '
+           f'fill="{color}" fill-opacity=".65" stroke="{color}" stroke-width="2"/>',
+           _rect(x - 24, y + 16, 48, 9, "#26384c", 3, "#8093aa")]
+    if active:
+        sweep = math.sin((t - BEACON["active"][0]) * math.tau) * 14
+        out += [_rect(x + sweep - 3, y - 19, 6, 34, "#fff0b3", 3),
+                f'<path d="M{x-31} {y-10}l-14-6M{x+31} {y-10}l14-6'
+                f'M{x} {y-36}v-9" stroke="#ffc66e" stroke-width="3" '
+                f'opacity="{0.45 + 0.5 * abs(sweep) / 14:.3f}"/>']
+    out += [_text(910, 506, "OPTIONAL EXTERNAL BEACON", 12, "#d5e3f3", 700),
+            _text(910, 526, "Rotating light · Compatible serial controller", 11, "#9fb6d0"),
+            _text(910, 546, "Separate on / off requests", 11, "#ffc66e" if active else "#9fb6d0")]
     return "".join(out)
 
 
@@ -341,16 +364,16 @@ def _caption(t):
                 "Displays 02 and 03 change page together every 4 seconds")
     if t < 19.5:
         return ("Display 01 receives its own warning.",
-                "A monitoring alert becomes a banner, serial light and sound on one display")
+                "Separate requests show a banner, a screen border and a sound cue")
     if t < 23:
         return ("Display 02 receives a critical database alert.",
-                "Each client has its own banner, serial light and audio output")
+                "Screen border and banner · An optional external beacon rotates nearby")
     if t < 26:
         return ("Display 03 receives an information notice.",
-                "Independent banners · Display name and clock stay visible above them")
+                "Independent banners, screen borders and audio per display")
     if t < 30:
-        return ("Banners expire; serial lights stop separately.",
-                "A banner timer does not switch off a light · Light-off is an explicit request")
+        return ("Banners and screen borders expire on their own timers.",
+                "The external beacon is separate hardware · Switching it off needs its own request")
     if t < 36:
         return ("One broadcast request reaches every display.",
                 "Same banner and sound on all three · Each display reports its own result")
@@ -403,9 +426,8 @@ def scene_svg(t: float, logos: dict) -> str:
            _integration(t)]
     out.extend(_monitor(i, t, logos) for i in range(3))
     out += ['<path d="M282 440h954" stroke="#71869b" stroke-width="3"/>',
-            _text(766, 462, "Individual display audio · Optional compatible serial light controllers",
-                  11, "#91abc4", 400, "middle"),
-            _text(766, 613, "Sound shown visually · Optional serial lights", 11,
+            _external_beacon(t),
+            _text(766, 613, "Sound shown visually · External beacon is optional", 11,
                   "#9fb6d0", 500, "middle"), _footer(t), '</g></svg>']
     return "".join(out)
 

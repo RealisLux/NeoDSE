@@ -1,351 +1,410 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1200" viewBox="0 0 2400 1200" role="img" aria-labelledby="api-title api-desc"><title id="api-title">NeoDSE API routes and request flow</title><desc id="api-desc">Routes grouped by capability alongside the request flow: authenticate, authorize, check display scope, dispatch commands and retrieve asynchronous results.</desc>
-<rect x="0" y="0" width="2400" height="1200" rx="0" fill="#ffffff" stroke="none" stroke-width="2"/>
-<text x="24" y="65" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="55" font-weight="700" text-anchor="start">NeoDSE API routes and request flow</text>
-<rect x="18" y="116" width="882" height="371" rx="15" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
-<g transform="translate(40 135)">
-<rect x="0" y="0" width="37" height="25" rx="2" fill="none" stroke="#2563eb" stroke-width="4"/>
-<path d="M18 25V33M10 34H27" fill="none" stroke="#2563eb" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1550" viewBox="0 0 2400 1550" role="img" aria-labelledby="api-title api-desc">
+<title id="api-title">NeoDSE API routes and request flow</title>
+<desc id="api-desc">All control API methods grouped by capability, including screen borders, serial peripherals and supported broadcasts. The request flow shows bearer authentication, role and agent scope checks and asynchronous results. Public process liveness is separate from authenticated readiness.</desc>
+<defs><g id="icon-monitor"><rect x="0" y="0" width="37" height="25" rx="2" fill="none" stroke="currentColor" stroke-width="4" /><path d="M18 25V33M10 34H27" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" /></g><g id="icon-content"><path d="M4 0H26L38 12V38H4Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" /><path d="M26 0V12H38" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" /><path d="M14 15L27 23L14 31Z" fill="#ffffff" stroke="#ffffff" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" /></g><g id="icon-calendar"><rect x="1" y="3" width="36" height="31" rx="3" fill="none" stroke="currentColor" stroke-width="3" /><path d="M1 12H37M10 0V7M28 0V7" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" /><rect x="8" y="17" width="4" height="4" rx="0" fill="currentColor" stroke="none" stroke-width="2" /><rect x="17" y="17" width="4" height="4" rx="0" fill="currentColor" stroke="none" stroke-width="2" /><rect x="26" y="17" width="4" height="4" rx="0" fill="currentColor" stroke="none" stroke-width="2" /><rect x="8" y="26" width="4" height="4" rx="0" fill="currentColor" stroke="none" stroke-width="2" /><rect x="17" y="26" width="4" height="4" rx="0" fill="currentColor" stroke="none" stroke-width="2" /><rect x="26" y="26" width="4" height="4" rx="0" fill="currentColor" stroke="none" stroke-width="2" /></g><g id="icon-gear"><polygon points="37.00,20.00 41.83,22.61 41.32,25.18 40.48,27.65 39.32,30.00 33.90,29.13 32.61,30.61 34.18,35.87 32.00,37.32 29.65,38.48 27.18,39.32 23.96,34.87 22.00,35.00 19.39,39.83 16.82,39.32 14.35,38.48 12.00,37.32 12.87,31.90 11.39,30.61 6.13,32.18 4.68,30.00 3.52,27.65 2.68,25.18 7.13,21.96 7.00,20.00 2.17,17.39 2.68,14.82 3.52,12.35 4.68,10.00 10.10,10.87 11.39,9.39 9.82,4.13 12.00,2.68 14.35,1.52 16.82,0.68 20.04,5.13 22.00,5.00 24.61,0.17 27.18,0.68 29.65,1.52 32.00,2.68 31.13,8.10 32.61,9.39 37.87,7.82 39.32,10.00 40.48,12.35 41.32,14.82 36.87,18.04" fill="currentColor" /><circle cx="22" cy="20" r="7" fill="white" /></g><g id="icon-broadcast"><circle cx="20" cy="20" r="5" fill="currentColor" /><path d="M11 8Q0 20 11 32M29 8Q40 20 29 32M5 2Q-12 20 5 38M35 2Q52 20 35 38" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" /></g><g id="icon-accounts"><circle cx="20" cy="8" r="7" fill="currentColor" /><rect x="13" y="18" width="14" height="17" rx="4" fill="currentColor" stroke="none" stroke-width="2" /><circle cx="3" cy="14" r="5" fill="currentColor" /><rect x="-2" y="22" width="10" height="17" rx="4" fill="currentColor" stroke="none" stroke-width="2" /><circle cx="37" cy="14" r="5" fill="currentColor" /><rect x="32" y="22" width="10" height="17" rx="4" fill="currentColor" stroke="none" stroke-width="2" /></g><g id="icon-document"><rect x="3" y="0" width="31" height="39" rx="3" fill="none" stroke="currentColor" stroke-width="3" /><path d="M11 10H26M11 18H26M11 26H26" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" /></g><g id="icon-shield"><path d="M20 0L38 7V21Q34 34 20 40Q6 34 2 21V7Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" /><path d="M11 19L18 26L29 13" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" /></g><g id="icon-dispatch"><path d="M0 19L40 0L29 39L19 27L12 34L13 24Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" /><path d="M13 24L34 6" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" /></g><g id="icon-results"><rect x="0" y="24" width="8" height="14" rx="2" fill="currentColor" stroke="none" stroke-width="2" /><rect x="13" y="13" width="8" height="25" rx="2" fill="currentColor" stroke="none" stroke-width="2" /><rect x="26" y="1" width="8" height="37" rx="2" fill="currentColor" stroke="none" stroke-width="2" /></g><g id="icon-alert"><path d="M5 29h30l-4-6V14a11 11 0 0 0-22 0v9Zm10 6a5 5 0 0 0 10 0M20 0v3" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></g></defs>
+<rect x="0" y="0" width="2400" height="1550" rx="0" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="24" y="65" font-family="DejaVu Sans, Arial, sans-serif" font-size="52" fill="#0f172a" font-weight="700" text-anchor="start">NeoDSE API routes and request flow</text>
+<text x="26" y="103" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" fill="#475569" font-weight="400" text-anchor="start">Methods and role capabilities from internal/server/routes.go · Endpoint contracts: internal/swagger/openapi.yaml</text>
+<rect x="24" y="130" width="880" height="434" rx="14" fill="#f8fafc" stroke="#2563eb" stroke-width="2"/>
+<use href="#icon-monitor" transform="translate(44 141) scale(0.7)" color="#2563eb" aria-hidden="true"/>
+<text x="86" y="162" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#2563eb" font-weight="700" text-anchor="start">SESSION AND MONITORING</text>
+<text x="44" y="184" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" fill="#475569" font-weight="400" text-anchor="start">Read access: any authenticated role; agent and event scope still apply</text>
+<g data-method="GET" data-path="/api/v1/session">
+<rect x="36" y="196" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="200" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="222" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="213" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/session</text>
+<text x="148" y="232" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Service-account identity and assigned roles</text>
 </g>
-<text x="100" y="162" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="25" font-weight="700" text-anchor="start">SESSION AND MONITORING</text>
-<text x="880" y="159" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="500" text-anchor="end">Collection, single-agent, session/system</text>
-<rect x="30" y="184" width="858" height="37" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="38" y="189" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="83" y="211" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="140" y="211" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/session</text>
-<text x="475" y="211" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">account identity and roles</text>
-<text x="876" y="211" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(session)</text>
-<rect x="30" y="226" width="858" height="37" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="38" y="231" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="83" y="253" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="140" y="253" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents</text>
-<text x="475" y="253" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">list accessible agents</text>
-<text x="876" y="253" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(collection)</text>
-<rect x="30" y="268" width="858" height="37" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="38" y="273" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="83" y="295" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="140" y="295" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}</text>
-<text x="475" y="295" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">agent details</text>
-<text x="876" y="295" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="310" width="858" height="37" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="38" y="315" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="83" y="337" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="140" y="337" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/state</text>
-<text x="475" y="337" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">desired display state</text>
-<text x="876" y="337" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="352" width="858" height="37" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="38" y="357" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="83" y="379" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="140" y="379" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/display/status</text>
-<text x="475" y="379" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">last reported CEC status</text>
-<text x="876" y="379" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="394" width="858" height="37" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="38" y="399" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="83" y="421" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="140" y="421" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/display/stream</text>
-<text x="475" y="421" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">read-only live stream</text>
-<text x="876" y="421" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="436" width="858" height="37" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="38" y="441" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="83" y="463" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="140" y="463" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/system/status</text>
-<text x="475" y="463" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">database / transport readiness</text>
-<text x="876" y="463" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(system)</text>
-<rect x="18" y="508" width="882" height="374" rx="15" fill="#f0fdf4" stroke="#15803d" stroke-width="3"/>
-<g transform="translate(40 527)">
-<path d="M4 0H26L38 12V38H4Z" fill="#15803d" stroke="#15803d" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M26 0V12H38" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M14 15L27 23L14 31Z" fill="#ffffff" stroke="#ffffff" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
+<g data-method="GET" data-path="/api/v1/agents">
+<rect x="36" y="242" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="246" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="268" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="259" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents</text>
+<text x="148" y="278" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">List the agents accessible to this account</text>
 </g>
-<text x="100" y="554" fill="#15803d" font-family="DejaVu Sans, Arial, sans-serif" font-size="25" font-weight="700" text-anchor="start">CONTENT CONTROL</text>
-<text x="880" y="551" fill="#15803d" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="500" text-anchor="end">Single-agent routes</text>
-<rect x="30" y="578" width="858" height="43" rx="9" fill="#f0fdf4" stroke="none" stroke-width="2"/>
-<rect x="38" y="583" width="90" height="31" rx="8" fill="#15803d" stroke="none" stroke-width="2"/>
-<text x="83" y="605" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">PUT</text>
-<text x="140" y="605" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/playlist</text>
-<text x="475" y="605" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">set playlist</text>
-<text x="876" y="605" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="626" width="858" height="43" rx="9" fill="#f0fdf4" stroke="none" stroke-width="2"/>
-<rect x="38" y="631" width="90" height="31" rx="8" fill="#15803d" stroke="none" stroke-width="2"/>
-<text x="83" y="653" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">DELETE</text>
-<text x="140" y="653" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/playlist</text>
-<text x="475" y="653" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">clear playlist</text>
-<text x="876" y="653" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="674" width="858" height="43" rx="9" fill="#f0fdf4" stroke="none" stroke-width="2"/>
-<rect x="38" y="679" width="90" height="31" rx="8" fill="#15803d" stroke="none" stroke-width="2"/>
-<text x="83" y="701" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="140" y="701" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/playlist/sync</text>
-<text x="475" y="701" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">sync playlist timing</text>
-<text x="876" y="701" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="722" width="858" height="43" rx="9" fill="#f0fdf4" stroke="none" stroke-width="2"/>
-<rect x="38" y="727" width="90" height="31" rx="8" fill="#15803d" stroke="none" stroke-width="2"/>
-<text x="83" y="749" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="140" y="749" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/playlist/reload</text>
-<text x="475" y="749" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">reload pages</text>
-<text x="876" y="749" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="770" width="858" height="43" rx="9" fill="#f0fdf4" stroke="none" stroke-width="2"/>
-<rect x="38" y="775" width="90" height="31" rx="8" fill="#15803d" stroke="none" stroke-width="2"/>
-<text x="83" y="797" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="140" y="797" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/banner</text>
-<text x="475" y="797" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">show banner</text>
-<text x="876" y="797" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="818" width="858" height="43" rx="9" fill="#f0fdf4" stroke="none" stroke-width="2"/>
-<rect x="38" y="823" width="90" height="31" rx="8" fill="#15803d" stroke="none" stroke-width="2"/>
-<text x="83" y="845" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="140" y="845" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/proxy/revoke</text>
-<text x="475" y="845" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">revoke web access</text>
-<text x="876" y="845" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="18" y="905" width="882" height="230" rx="15" fill="#f1f5f9" stroke="#64748b" stroke-width="3"/>
-<g transform="translate(40 924)">
-<rect x="1" y="3" width="36" height="31" rx="3" fill="none" stroke="#64748b" stroke-width="3"/>
-<path d="M1 12H37M10 0V7M28 0V7" fill="none" stroke="#64748b" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="8" y="17" width="4" height="4" rx="0" fill="#64748b" stroke="none" stroke-width="2"/>
-<rect x="17" y="17" width="4" height="4" rx="0" fill="#64748b" stroke="none" stroke-width="2"/>
-<rect x="26" y="17" width="4" height="4" rx="0" fill="#64748b" stroke="none" stroke-width="2"/>
-<rect x="8" y="26" width="4" height="4" rx="0" fill="#64748b" stroke="none" stroke-width="2"/>
-<rect x="17" y="26" width="4" height="4" rx="0" fill="#64748b" stroke="none" stroke-width="2"/>
-<rect x="26" y="26" width="4" height="4" rx="0" fill="#64748b" stroke="none" stroke-width="2"/>
+<g data-method="GET" data-path="/api/v1/agents/{agentId}">
+<rect x="36" y="288" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="292" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="314" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="305" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}</text>
+<text x="148" y="324" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Last reported agent status and authentication state</text>
 </g>
-<text x="100" y="951" fill="#64748b" font-family="DejaVu Sans, Arial, sans-serif" font-size="25" font-weight="700" text-anchor="start">SCHEDULING</text>
-<text x="880" y="948" fill="#64748b" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="500" text-anchor="end">Read: scoped roles; write: administrator</text>
-<rect x="30" y="974" width="858" height="43" rx="9" fill="#f1f5f9" stroke="none" stroke-width="2"/>
-<rect x="38" y="979" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="83" y="1001" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="140" y="1001" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/schedules</text>
-<text x="475" y="1001" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">list schedules</text>
-<text x="876" y="1001" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="1022" width="858" height="43" rx="9" fill="#f1f5f9" stroke="none" stroke-width="2"/>
-<rect x="38" y="1027" width="90" height="31" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
-<text x="83" y="1049" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="140" y="1049" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/schedules</text>
-<text x="475" y="1049" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">set weekly schedule</text>
-<text x="876" y="1049" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="30" y="1070" width="858" height="43" rx="9" fill="#f1f5f9" stroke="none" stroke-width="2"/>
-<rect x="38" y="1075" width="90" height="31" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
-<text x="83" y="1097" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">DELETE</text>
-<text x="140" y="1097" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/schedules</text>
-<text x="475" y="1097" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">delete schedule</text>
-<text x="876" y="1097" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(single-agent)</text>
-<rect x="1500" y="116" width="882" height="351" rx="15" fill="#fff1f2" stroke="#be123c" stroke-width="3"/>
-<g transform="translate(1522 135)">
-<polygon points="37.00,20.00 41.83,22.61 41.32,25.18 40.48,27.65 39.32,30.00 33.90,29.13 32.61,30.61 34.18,35.87 32.00,37.32 29.65,38.48 27.18,39.32 23.96,34.87 22.00,35.00 19.39,39.83 16.82,39.32 14.35,38.48 12.00,37.32 12.87,31.90 11.39,30.61 6.13,32.18 4.68,30.00 3.52,27.65 2.68,25.18 7.13,21.96 7.00,20.00 2.17,17.39 2.68,14.82 3.52,12.35 4.68,10.00 10.10,10.87 11.39,9.39 9.82,4.13 12.00,2.68 14.35,1.52 16.82,0.68 20.04,5.13 22.00,5.00 24.61,0.17 27.18,0.68 29.65,1.52 32.00,2.68 31.13,8.10 32.61,9.39 37.87,7.82 39.32,10.00 40.48,12.35 41.32,14.82 36.87,18.04" fill="#be123c"/>
-<circle cx="22" cy="20" r="7" fill="white"/>
+<g data-method="GET" data-path="/api/v1/agents/{agentId}/state">
+<rect x="36" y="334" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="338" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="360" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="351" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/state</text>
+<text x="148" y="370" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Controller-authoritative desired content and revision</text>
 </g>
-<text x="1582" y="162" fill="#be123c" font-family="DejaVu Sans, Arial, sans-serif" font-size="25" font-weight="700" text-anchor="start">DEVICE CONTROL</text>
-<text x="2362" y="159" fill="#be123c" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="500" text-anchor="end">Single-agent routes</text>
-<rect x="1512" y="184" width="858" height="49" rx="9" fill="#fff1f2" stroke="none" stroke-width="2"/>
-<rect x="1520" y="189" width="90" height="31" rx="8" fill="#be123c" stroke="none" stroke-width="2"/>
-<text x="1565" y="211" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="1622" y="211" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/{operation}</text>
-<text x="2082" y="211" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">restart, reboot, shutdown</text>
-<text x="2358" y="211" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(system)</text>
-<rect x="1512" y="238" width="858" height="49" rx="9" fill="#fff1f2" stroke="none" stroke-width="2"/>
-<rect x="1520" y="243" width="90" height="31" rx="8" fill="#c2410c" stroke="none" stroke-width="2"/>
-<text x="1565" y="265" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="1622" y="265" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/display/{operation}</text>
-<text x="2082" y="254" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">on / off / active</text>
-<text x="2082" y="275" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">mute / volup / voldown</text>
-<text x="2358" y="265" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(display)</text>
-<rect x="1512" y="292" width="858" height="49" rx="9" fill="#fff1f2" stroke="none" stroke-width="2"/>
-<rect x="1520" y="297" width="90" height="31" rx="8" fill="#c2410c" stroke="none" stroke-width="2"/>
-<text x="1565" y="319" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="1622" y="319" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/display/volume</text>
-<text x="2082" y="319" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">set CEC volume</text>
-<text x="2358" y="319" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(display)</text>
-<rect x="1512" y="346" width="858" height="49" rx="9" fill="#fff1f2" stroke="none" stroke-width="2"/>
-<rect x="1520" y="351" width="90" height="31" rx="8" fill="#7c3aed" stroke="none" stroke-width="2"/>
-<text x="1565" y="373" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="1622" y="373" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/sound/{profile}</text>
-<text x="2082" y="373" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">info / warning / critical</text>
-<text x="2358" y="373" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(sound)</text>
-<rect x="1512" y="400" width="858" height="49" rx="9" fill="#fff1f2" stroke="none" stroke-width="2"/>
-<rect x="1520" y="405" width="90" height="31" rx="8" fill="#7c3aed" stroke="none" stroke-width="2"/>
-<text x="1565" y="427" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="1622" y="427" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="16" font-weight="600" text-anchor="start">/agents/{agentId}/serial</text>
-<text x="2082" y="427" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">structured serial action</text>
-<text x="2358" y="427" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(serial)</text>
-<rect x="1500" y="489" width="882" height="159" rx="15" fill="#f5f3ff" stroke="#7c3aed" stroke-width="3"/>
-<g transform="translate(1522 508)">
-<circle cx="20" cy="20" r="5" fill="#7c3aed"/>
-<path d="M11 8Q0 20 11 32M29 8Q40 20 29 32M5 2Q-12 20 5 38M35 2Q52 20 35 38" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<g data-method="GET" data-path="/api/v1/agents/{agentId}/display/status">
+<rect x="36" y="380" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="384" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="406" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="397" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/display/status</text>
+<text x="148" y="416" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Last reported HDMI-CEC display status</text>
 </g>
-<text x="1582" y="535" fill="#7c3aed" font-family="DejaVu Sans, Arial, sans-serif" font-size="25" font-weight="700" text-anchor="start">BROADCAST</text>
-<text x="2362" y="532" fill="#7c3aed" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="500" text-anchor="end">Same role as matching action</text>
-<rect x="1522" y="568" width="90" height="31" rx="8" fill="#0f172a" stroke="none" stroke-width="2"/>
-<text x="1567" y="590" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<rect x="1619" y="568" width="90" height="31" rx="8" fill="#15803d" stroke="none" stroke-width="2"/>
-<text x="1664" y="590" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">PUT</text>
-<rect x="1716" y="568" width="90" height="31" rx="8" fill="#15803d" stroke="none" stroke-width="2"/>
-<text x="1761" y="590" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">DELETE</text>
-<text x="1827" y="593" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="19" font-weight="600" text-anchor="start">/agents/broadcast/…</text>
-<text x="2106" y="577" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">Supported content/device actions</text>
-<text x="2106" y="599" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">across agents permitted by</text>
-<text x="2106" y="621" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">the account scope.</text>
-<rect x="1500" y="668" width="882" height="356" rx="15" fill="#f1f5f9" stroke="#64748b" stroke-width="3"/>
-<g transform="translate(1522 687)">
-<circle cx="20" cy="8" r="7" fill="#64748b"/>
-<rect x="13" y="18" width="14" height="17" rx="4" fill="#64748b" stroke="none" stroke-width="2"/>
-<circle cx="3" cy="14" r="5" fill="#64748b"/>
-<rect x="-2" y="22" width="10" height="17" rx="4" fill="#64748b" stroke="none" stroke-width="2"/>
-<circle cx="37" cy="14" r="5" fill="#64748b"/>
-<rect x="32" y="22" width="10" height="17" rx="4" fill="#64748b" stroke="none" stroke-width="2"/>
+<g data-method="GET" data-path="/api/v1/agents/{agentId}/display/stream">
+<rect x="36" y="426" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="430" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="452" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="443" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/display/stream</text>
+<text x="148" y="462" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Read-only live stream; one viewer per display</text>
 </g>
-<text x="1582" y="714" fill="#64748b" font-family="DejaVu Sans, Arial, sans-serif" font-size="25" font-weight="700" text-anchor="start">ADMINISTRATION</text>
-<text x="2362" y="711" fill="#64748b" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="500" text-anchor="end">Administrator routes only</text>
-<rect x="1512" y="737" width="858" height="41" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="1520" y="742" width="90" height="31" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
-<text x="1565" y="764" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="1622" y="764" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="14" font-weight="600" text-anchor="start">/service-accounts</text>
-<text x="2062" y="764" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">list accounts</text>
-<text x="2358" y="764" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(collection)</text>
-<rect x="1512" y="783" width="858" height="41" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="1520" y="788" width="90" height="31" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
-<text x="1565" y="810" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="1622" y="810" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="14" font-weight="600" text-anchor="start">/service-accounts</text>
-<text x="2062" y="810" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">create account</text>
-<text x="2358" y="810" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(collection)</text>
-<rect x="1512" y="829" width="858" height="41" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="1520" y="834" width="90" height="31" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
-<text x="1565" y="856" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="1622" y="856" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="14" font-weight="600" text-anchor="start">/service-accounts/{accountId}</text>
-<text x="2062" y="856" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">get account</text>
-<text x="2358" y="856" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(account-specific)</text>
-<rect x="1512" y="875" width="858" height="41" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="1520" y="880" width="90" height="31" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
-<text x="1565" y="902" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">PUT</text>
-<text x="1622" y="902" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="14" font-weight="600" text-anchor="start">/service-accounts/{accountId}</text>
-<text x="2062" y="902" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">replace account</text>
-<text x="2358" y="902" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(account-specific)</text>
-<rect x="1512" y="921" width="858" height="41" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="1520" y="926" width="90" height="31" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
-<text x="1565" y="948" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">DELETE</text>
-<text x="1622" y="948" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="14" font-weight="600" text-anchor="start">/service-accounts/{accountId}</text>
-<text x="2062" y="948" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">delete account</text>
-<text x="2358" y="948" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(account-specific)</text>
-<rect x="1512" y="967" width="858" height="41" rx="9" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<rect x="1520" y="972" width="90" height="31" rx="8" fill="#64748b" stroke="none" stroke-width="2"/>
-<text x="1565" y="994" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">POST</text>
-<text x="1622" y="994" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="14" font-weight="600" text-anchor="start">/service-accounts/{accountId}/rotate-token</text>
-<text x="2062" y="994" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">rotate token</text>
-<text x="2358" y="994" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="400" text-anchor="end">(account-specific)</text>
-<rect x="1500" y="1040" width="882" height="95" rx="15" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
-<g transform="translate(1522 1059)">
-<rect x="3" y="0" width="31" height="39" rx="3" fill="none" stroke="#2563eb" stroke-width="3"/>
-<path d="M11 10H26M11 18H26M11 26H26" fill="none" stroke="#2563eb" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<g data-method="GET" data-path="/api/v1/system/status">
+<rect x="36" y="472" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="476" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="498" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="489" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/system/status</text>
+<text x="148" y="508" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Authenticated database and transport readiness</text>
 </g>
-<text x="1582" y="1086" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="25" font-weight="700" text-anchor="start">ASYNC RESULT</text>
-<text x="2362" y="1083" fill="#2563eb" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="500" text-anchor="end">Scope: every event target</text>
-<rect x="1522" y="1094" width="90" height="31" rx="8" fill="#2563eb" stroke="none" stroke-width="2"/>
-<text x="1567" y="1116" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="middle">GET</text>
-<text x="1630" y="1117" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="17" font-weight="600" text-anchor="start">/events/{eventId}</text>
-<text x="1945" y="1117" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="400" text-anchor="start">delivery outcomes and agent receipts</text>
-<rect x="931" y="82" width="536" height="104" rx="21" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<text x="1199" y="126" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="42" font-weight="700" text-anchor="middle">/api/v1</text>
-<text x="1199" y="165" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="400" text-anchor="middle">All routes below are relative to this common prefix.</text>
-<rect x="933" y="201" width="532" height="96" rx="21" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<circle cx="972" cy="249.0" r="27" fill="#0f172a"/>
-<text x="972" y="259.0" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="29" font-weight="700" text-anchor="middle">1</text>
-<g transform="translate(1027 230.0)">
-<rect x="0" y="0" width="37" height="25" rx="2" fill="none" stroke="#0f172a" stroke-width="4"/>
-<path d="M18 25V33M10 34H27" fill="none" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<g data-method="GET" data-path="/api/v1/events/{eventId}">
+<rect x="36" y="518" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="522" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="544" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="535" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/events/{eventId}</text>
+<text x="148" y="554" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Durable delivery outcomes and receipts; requires scope over every target</text>
 </g>
-<text x="1105" y="242.5" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">Client sends an HTTPS request.</text>
-<text x="1105" y="269.5" fill="#0f172a" font-family="DejaVu Sans Mono, monospace" font-size="18" font-weight="700" text-anchor="start">Authorization: Bearer &lt;token&gt;</text>
-<path d="M1199 300V307" fill="none" stroke="#2563eb" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M1186 306L1199 317L1212 306Z" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="933" y="321" width="532" height="99" rx="21" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<circle cx="972" cy="370.5" r="27" fill="#0f172a"/>
-<text x="972" y="380.5" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="29" font-weight="700" text-anchor="middle">2</text>
-<g transform="translate(1027 351.5)">
-<rect x="3" y="0" width="31" height="39" rx="3" fill="none" stroke="#0f172a" stroke-width="3"/>
-<path d="M11 10H26M11 18H26M11 26H26" fill="none" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="24" y="582" width="880" height="296" rx="14" fill="#f8fafc" stroke="#15803d" stroke-width="2"/>
+<use href="#icon-content" transform="translate(44 593) scale(0.7)" color="#15803d" aria-hidden="true"/>
+<text x="86" y="614" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#15803d" font-weight="700" text-anchor="start">CONTENT CONTROL</text>
+<text x="44" y="636" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" fill="#475569" font-weight="400" text-anchor="start">Role: content_manager · Single agent within account scope</text>
+<g data-method="PUT" data-path="/api/v1/agents/{agentId}/playlist">
+<rect x="36" y="648" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="652" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="88" y="674" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">PUT</text>
+<text x="148" y="665" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/playlist</text>
+<text x="148" y="684" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Replace the saved playlist and authorize its web destinations</text>
 </g>
-<text x="1105" y="364.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">Authentication resolves</text>
-<text x="1105" y="391.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">the service account.</text>
-<path d="M1199 423V428" fill="none" stroke="#2563eb" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M1186 427L1199 438L1212 427Z" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="933" y="442" width="532" height="103" rx="21" fill="#f0fdf4" stroke="none" stroke-width="2"/>
-<circle cx="972" cy="493.5" r="27" fill="#0f172a"/>
-<text x="972" y="503.5" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="29" font-weight="700" text-anchor="middle">3</text>
-<g transform="translate(1027 474.5)">
-<path d="M20 0L38 7V21Q34 34 20 40Q6 34 2 21V7Z" fill="none" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M11 19L18 26L29 13" fill="none" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<g data-method="DELETE" data-path="/api/v1/agents/{agentId}/playlist">
+<rect x="36" y="694" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="698" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="88" y="720" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">DELETE</text>
+<text x="148" y="711" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/playlist</text>
+<text x="148" y="730" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Clear the saved playlist and restore the waiting screen</text>
 </g>
-<text x="1105" y="487.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">Authorization checks the</text>
-<text x="1105" y="514.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">required role capability.</text>
-<path d="M1199 548V554" fill="none" stroke="#2563eb" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M1186 553L1199 564L1212 553Z" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="933" y="568" width="532" height="119" rx="21" fill="#f5f3ff" stroke="none" stroke-width="2"/>
-<circle cx="972" cy="627.5" r="27" fill="#0f172a"/>
-<text x="972" y="637.5" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="29" font-weight="700" text-anchor="middle">4</text>
-<g transform="translate(1027 608.5)">
-<circle cx="20" cy="8" r="7" fill="#0f172a"/>
-<rect x="13" y="18" width="14" height="17" rx="4" fill="#0f172a" stroke="none" stroke-width="2"/>
-<circle cx="3" cy="14" r="5" fill="#0f172a"/>
-<rect x="-2" y="22" width="10" height="17" rx="4" fill="#0f172a" stroke="none" stroke-width="2"/>
-<circle cx="37" cy="14" r="5" fill="#0f172a"/>
-<rect x="32" y="22" width="10" height="17" rx="4" fill="#0f172a" stroke="none" stroke-width="2"/>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/playlist/sync">
+<rect x="36" y="740" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="744" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="88" y="766" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="148" y="757" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/playlist/sync</text>
+<text x="148" y="776" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Update saved playlist timing</text>
 </g>
-<text x="1105" y="607.5" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">Agent-specific routes check</text>
-<text x="1105" y="634.5" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">the account’s agent scope and</text>
-<text x="1105" y="661.5" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">verify that the agent exists.</text>
-<path d="M1199 690V698" fill="none" stroke="#2563eb" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M1186 697L1199 708L1212 697Z" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="933" y="712" width="532" height="99" rx="21" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<circle cx="972" cy="761.5" r="27" fill="#0f172a"/>
-<text x="972" y="771.5" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="29" font-weight="700" text-anchor="middle">5</text>
-<g transform="translate(1027 742.5)">
-<polygon points="37.00,20.00 41.83,22.61 41.32,25.18 40.48,27.65 39.32,30.00 33.90,29.13 32.61,30.61 34.18,35.87 32.00,37.32 29.65,38.48 27.18,39.32 23.96,34.87 22.00,35.00 19.39,39.83 16.82,39.32 14.35,38.48 12.00,37.32 12.87,31.90 11.39,30.61 6.13,32.18 4.68,30.00 3.52,27.65 2.68,25.18 7.13,21.96 7.00,20.00 2.17,17.39 2.68,14.82 3.52,12.35 4.68,10.00 10.10,10.87 11.39,9.39 9.82,4.13 12.00,2.68 14.35,1.52 16.82,0.68 20.04,5.13 22.00,5.00 24.61,0.17 27.18,0.68 29.65,1.52 32.00,2.68 31.13,8.10 32.61,9.39 37.87,7.82 39.32,10.00 40.48,12.35 41.32,14.82 36.87,18.04" fill="#0f172a"/>
-<circle cx="22" cy="20" r="7" fill="white"/>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/playlist/reload">
+<rect x="36" y="786" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="790" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="88" y="812" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="148" y="803" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/playlist/reload</text>
+<text x="148" y="822" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Reload active pages without changing playback timing</text>
 </g>
-<text x="1105" y="755.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">Server validates and</text>
-<text x="1105" y="782.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">dispatches the request.</text>
-<path d="M1199 814V822" fill="none" stroke="#2563eb" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M1186 821L1199 832L1212 821Z" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="933" y="836" width="532" height="106" rx="21" fill="#f5f3ff" stroke="none" stroke-width="2"/>
-<circle cx="972" cy="889.0" r="27" fill="#0f172a"/>
-<text x="972" y="899.0" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="29" font-weight="700" text-anchor="middle">6</text>
-<g transform="translate(1027 870.0)">
-<path d="M0 19L40 0L29 39L19 27L12 34L13 24Z" fill="#0f172a" stroke="#0f172a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M13 24L34 6" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/proxy/revoke">
+<rect x="36" y="832" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="836" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="88" y="858" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="148" y="849" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/proxy/revoke</text>
+<text x="148" y="868" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Revoke content-proxy permissions</text>
 </g>
-<text x="1105" y="869.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">Commands go to one agent</text>
-<text x="1105" y="896.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">or broadcast to the permitted</text>
-<text x="1105" y="923.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">fleet.</text>
-<path d="M1199 945V953" fill="none" stroke="#2563eb" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M1186 952L1199 963L1212 952Z" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="933" y="967" width="532" height="95" rx="21" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<circle cx="972" cy="1014.5" r="27" fill="#0f172a"/>
-<text x="972" y="1024.5" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="29" font-weight="700" text-anchor="middle">7</text>
-<g transform="translate(1027 995.5)">
-<rect x="3" y="0" width="31" height="39" rx="3" fill="none" stroke="#0f172a" stroke-width="3"/>
-<path d="M11 10H26M11 18H26M11 26H26" fill="none" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="24" y="896" width="880" height="204" rx="14" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
+<use href="#icon-calendar" transform="translate(44 907) scale(0.7)" color="#64748b" aria-hidden="true"/>
+<text x="86" y="928" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#64748b" font-weight="700" text-anchor="start">SCHEDULING</text>
+<text x="44" y="950" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" fill="#475569" font-weight="400" text-anchor="start">Read: any authenticated role · Write: administrator · Scoped to one agent</text>
+<g data-method="GET" data-path="/api/v1/agents/{agentId}/schedules">
+<rect x="36" y="962" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="966" width="88" height="31" rx="7" fill="#2563eb" stroke="none" stroke-width="2"/>
+<text x="88" y="988" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="979" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/schedules</text>
+<text x="148" y="998" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Read the optional weekly screen-power schedule</text>
 </g>
-<text x="1105" y="1008.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">Queued commands return</text>
-<text x="1105" y="1035.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="start">202 + an event identifier.</text>
-<path d="M1199 1065V1068" fill="none" stroke="#2563eb" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M1186 1067L1199 1078L1212 1067Z" fill="#2563eb" stroke="#2563eb" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="933" y="1082" width="532" height="53" rx="21" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<circle cx="972" cy="1108.5" r="27" fill="#0f172a"/>
-<text x="972" y="1118.5" fill="white" font-family="DejaVu Sans, Arial, sans-serif" font-size="29" font-weight="700" text-anchor="middle">8</text>
-<g transform="translate(1027 1089.5)">
-<rect x="0" y="24" width="8" height="14" rx="2" fill="#0f172a" stroke="none" stroke-width="2"/>
-<rect x="13" y="13" width="8" height="25" rx="2" fill="#0f172a" stroke="none" stroke-width="2"/>
-<rect x="26" y="1" width="8" height="37" rx="2" fill="#0f172a" stroke="none" stroke-width="2"/>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/schedules">
+<rect x="36" y="1008" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="1012" width="88" height="31" rx="7" fill="#64748b" stroke="none" stroke-width="2"/>
+<text x="88" y="1034" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="148" y="1025" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/schedules</text>
+<text x="148" y="1044" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Create or replace the weekly schedule</text>
 </g>
-<text x="1105" y="1102.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="700" text-anchor="start">Client polls GET /events/{eventId}</text>
-<text x="1105" y="1129.0" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="700" text-anchor="start">for status and results.</text>
-<rect x="18" y="1151" width="2364" height="43" rx="16" fill="#eff6ff" stroke="none" stroke-width="2"/>
-<text x="278" y="1178" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="700" text-anchor="start">Role capabilities by operation:</text>
-<circle cx="606" cy="1172" r="14" fill="#2563eb"/>
-<text x="631" y="1178" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">read/view</text>
-<circle cx="882" cy="1172" r="14" fill="#15803d"/>
-<text x="907" y="1178" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">content management</text>
-<circle cx="1158" cy="1172" r="14" fill="#c2410c"/>
-<text x="1183" y="1178" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">display/CEC</text>
-<circle cx="1434" cy="1172" r="14" fill="#7c3aed"/>
-<text x="1459" y="1178" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">alert and serial I/O</text>
-<circle cx="1710" cy="1172" r="14" fill="#be123c"/>
-<text x="1735" y="1178" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">system operations</text>
-<circle cx="1986" cy="1172" r="14" fill="#64748b"/>
-<text x="2011" y="1178" fill="#0f172a" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="400" text-anchor="start">administrator only</text>
+<g data-method="DELETE" data-path="/api/v1/agents/{agentId}/schedules">
+<rect x="36" y="1054" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="1058" width="88" height="31" rx="7" fill="#64748b" stroke="none" stroke-width="2"/>
+<text x="88" y="1080" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">DELETE</text>
+<text x="148" y="1071" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/schedules</text>
+<text x="148" y="1090" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Delete the weekly schedule</text>
+</g>
+<rect x="24" y="1118" width="880" height="342" rx="14" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
+<use href="#icon-accounts" transform="translate(44 1129) scale(0.7)" color="#64748b" aria-hidden="true"/>
+<text x="86" y="1150" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#64748b" font-weight="700" text-anchor="start">ADMINISTRATION</text>
+<text x="44" y="1172" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" fill="#475569" font-weight="400" text-anchor="start">Role: administrator · Administrators can also use every other operation</text>
+<g data-method="GET" data-path="/api/v1/service-accounts">
+<rect x="36" y="1184" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="1188" width="88" height="31" rx="7" fill="#64748b" stroke="none" stroke-width="2"/>
+<text x="88" y="1210" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="1201" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/service-accounts</text>
+<text x="148" y="1220" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">List service accounts</text>
+</g>
+<g data-method="POST" data-path="/api/v1/service-accounts">
+<rect x="36" y="1230" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="1234" width="88" height="31" rx="7" fill="#64748b" stroke="none" stroke-width="2"/>
+<text x="88" y="1256" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="148" y="1247" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/service-accounts</text>
+<text x="148" y="1266" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Create an account and issue a bearer token</text>
+</g>
+<g data-method="GET" data-path="/api/v1/service-accounts/{accountId}">
+<rect x="36" y="1276" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="1280" width="88" height="31" rx="7" fill="#64748b" stroke="none" stroke-width="2"/>
+<text x="88" y="1302" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">GET</text>
+<text x="148" y="1293" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/service-accounts/{accountId}</text>
+<text x="148" y="1312" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Read one service account</text>
+</g>
+<g data-method="PUT" data-path="/api/v1/service-accounts/{accountId}">
+<rect x="36" y="1322" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="1326" width="88" height="31" rx="7" fill="#64748b" stroke="none" stroke-width="2"/>
+<text x="88" y="1348" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">PUT</text>
+<text x="148" y="1339" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/service-accounts/{accountId}</text>
+<text x="148" y="1358" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Replace account metadata, roles and agent scope</text>
+</g>
+<g data-method="DELETE" data-path="/api/v1/service-accounts/{accountId}">
+<rect x="36" y="1368" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="44" y="1372" width="88" height="31" rx="7" fill="#64748b" stroke="none" stroke-width="2"/>
+<text x="88" y="1394" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">DELETE</text>
+<text x="148" y="1385" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/service-accounts/{accountId}</text>
+<text x="148" y="1404" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Delete the account and revoke its token</text>
+</g>
+<g data-method="POST" data-path="/api/v1/service-accounts/{accountId}/rotate-token">
+<rect x="36" y="1414" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="44" y="1418" width="88" height="31" rx="7" fill="#64748b" stroke="none" stroke-width="2"/>
+<text x="88" y="1440" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="148" y="1431" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/service-accounts/{accountId}/rotate-token</text>
+<text x="148" y="1450" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Replace the account&#x27;s bearer token</text>
+</g>
+<rect x="1496" y="130" width="880" height="204" rx="14" fill="#f8fafc" stroke="#be123c" stroke-width="2"/>
+<use href="#icon-gear" transform="translate(1516 141) scale(0.7)" color="#be123c" aria-hidden="true"/>
+<text x="1558" y="162" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#be123c" font-weight="700" text-anchor="start">DEVICE AND HOST CONTROL</text>
+<text x="1516" y="184" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" fill="#475569" font-weight="400" text-anchor="start">Roles: cec_manager for display actions · system_operator for host actions</text>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/{operation}">
+<rect x="1508" y="196" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="200" width="88" height="31" rx="7" fill="#be123c" stroke="none" stroke-width="2"/>
+<text x="1560" y="222" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="213" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/{operation}</text>
+<text x="1620" y="232" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">restart (renderer), reboot or shutdown (Linux host)</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/display/{operation}">
+<rect x="1508" y="242" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="1516" y="246" width="88" height="31" rx="7" fill="#c2410c" stroke="none" stroke-width="2"/>
+<text x="1560" y="268" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="259" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/display/{operation}</text>
+<text x="1620" y="278" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">on / off / active / mute / volup / voldown via HDMI-CEC</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/display/volume">
+<rect x="1508" y="288" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="292" width="88" height="31" rx="7" fill="#c2410c" stroke="none" stroke-width="2"/>
+<text x="1560" y="314" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="305" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/display/volume</text>
+<text x="1620" y="324" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Set the absolute HDMI-CEC audio volume</text>
+</g>
+<rect x="1496" y="352" width="880" height="250" rx="14" fill="#f8fafc" stroke="#7c3aed" stroke-width="2"/>
+<use href="#icon-alert" transform="translate(1516 363) scale(0.7)" color="#7c3aed" aria-hidden="true"/>
+<text x="1558" y="384" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#7c3aed" font-weight="700" text-anchor="start">ALERTS AND PERIPHERALS</text>
+<text x="1516" y="406" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" fill="#475569" font-weight="400" text-anchor="start">Role: alert_operator · Independent commands for an online, authenticated agent</text>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/banner">
+<rect x="1508" y="418" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="422" width="88" height="31" rx="7" fill="#7c3aed" stroke="none" stroke-width="2"/>
+<text x="1560" y="444" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="435" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/banner</text>
+<text x="1620" y="454" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Message, severity and duration; info / warning / critical</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/border">
+<rect x="1508" y="464" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="1516" y="468" width="88" height="31" rx="7" fill="#7c3aed" stroke="none" stroke-width="2"/>
+<text x="1560" y="490" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="481" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/border</text>
+<text x="1620" y="500" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Screen border: severity and duration; independent of the banner</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/sound/{profile}">
+<rect x="1508" y="510" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="514" width="88" height="31" rx="7" fill="#7c3aed" stroke="none" stroke-width="2"/>
+<text x="1560" y="536" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="527" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/sound/{profile}</text>
+<text x="1620" y="546" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Notification audio: info / warning / critical</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/{agentId}/serial">
+<rect x="1508" y="556" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="1516" y="560" width="88" height="31" rx="7" fill="#7c3aed" stroke="none" stroke-width="2"/>
+<text x="1560" y="582" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="573" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/{agentId}/serial</text>
+<text x="1620" y="592" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Structured beacon, buzzer, relay, device-info or status action</text>
+</g>
+<rect x="1496" y="620" width="880" height="572" rx="14" fill="#f8fafc" stroke="#7c3aed" stroke-width="2"/>
+<use href="#icon-broadcast" transform="translate(1516 631) scale(0.7)" color="#7c3aed" aria-hidden="true"/>
+<text x="1558" y="652" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#7c3aed" font-weight="700" text-anchor="start">BROADCAST</text>
+<text x="1516" y="674" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" fill="#475569" font-weight="400" text-anchor="start">Same role as the matching single-agent action · Targets come from account scope</text>
+<g data-method="PUT" data-path="/api/v1/agents/broadcast/playlist">
+<rect x="1508" y="686" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="690" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="1560" y="712" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">PUT</text>
+<text x="1620" y="703" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/playlist</text>
+<text x="1620" y="722" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Replace playlists across permitted agents</text>
+</g>
+<g data-method="DELETE" data-path="/api/v1/agents/broadcast/playlist">
+<rect x="1508" y="732" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="1516" y="736" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="1560" y="758" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">DELETE</text>
+<text x="1620" y="749" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/playlist</text>
+<text x="1620" y="768" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Clear playlists across permitted agents</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/playlist/sync">
+<rect x="1508" y="778" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="782" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="1560" y="804" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="795" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/playlist/sync</text>
+<text x="1620" y="814" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Synchronize saved playlist timing</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/playlist/reload">
+<rect x="1508" y="824" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="1516" y="828" width="88" height="31" rx="7" fill="#15803d" stroke="none" stroke-width="2"/>
+<text x="1560" y="850" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="841" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/playlist/reload</text>
+<text x="1620" y="860" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Reload active playlist pages</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/display/{operation}">
+<rect x="1508" y="870" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="874" width="88" height="31" rx="7" fill="#c2410c" stroke="none" stroke-width="2"/>
+<text x="1560" y="896" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="887" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/display/{operation}</text>
+<text x="1620" y="906" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">on / off / active / mute / volup / voldown via HDMI-CEC</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/display/volume">
+<rect x="1508" y="916" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="1516" y="920" width="88" height="31" rx="7" fill="#c2410c" stroke="none" stroke-width="2"/>
+<text x="1560" y="942" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="933" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/display/volume</text>
+<text x="1620" y="952" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Set the absolute HDMI-CEC audio volume</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/banner">
+<rect x="1508" y="962" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="966" width="88" height="31" rx="7" fill="#7c3aed" stroke="none" stroke-width="2"/>
+<text x="1560" y="988" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="979" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/banner</text>
+<text x="1620" y="998" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Send a message banner</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/border">
+<rect x="1508" y="1008" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="1516" y="1012" width="88" height="31" rx="7" fill="#7c3aed" stroke="none" stroke-width="2"/>
+<text x="1560" y="1034" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="1025" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/border</text>
+<text x="1620" y="1044" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Highlight scoped screens with a screen border</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/sound/{profile}">
+<rect x="1508" y="1054" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="1058" width="88" height="31" rx="7" fill="#7c3aed" stroke="none" stroke-width="2"/>
+<text x="1560" y="1080" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="1071" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/sound/{profile}</text>
+<text x="1620" y="1090" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Play info / warning / critical notification audio</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/serial">
+<rect x="1508" y="1100" width="856" height="44" rx="7" fill="#ffffff" stroke="none" stroke-width="2"/>
+<rect x="1516" y="1104" width="88" height="31" rx="7" fill="#7c3aed" stroke="none" stroke-width="2"/>
+<text x="1560" y="1126" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="1117" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/serial</text>
+<text x="1620" y="1136" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">Send a structured peripheral action</text>
+</g>
+<g data-method="POST" data-path="/api/v1/agents/broadcast/{operation}">
+<rect x="1508" y="1146" width="856" height="44" rx="7" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<rect x="1516" y="1150" width="88" height="31" rx="7" fill="#be123c" stroke="none" stroke-width="2"/>
+<text x="1560" y="1172" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">POST</text>
+<text x="1620" y="1163" font-family="DejaVu Sans Mono, monospace" font-size="16" fill="#0f172a" font-weight="600" text-anchor="start">/agents/broadcast/{operation}</text>
+<text x="1620" y="1182" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" fill="#475569" font-weight="400" text-anchor="start">restart / reboot / shutdown; per-target outcomes</text>
+</g>
+<rect x="932" y="130" width="536" height="100" rx="14" fill="#eff6ff" stroke="none" stroke-width="2"/>
+<text x="1200" y="174" font-family="DejaVu Sans Mono, monospace" font-size="38" fill="#0f172a" font-weight="700" text-anchor="middle">/api/v1</text>
+<text x="1200" y="209" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" fill="#0f172a" font-weight="400" text-anchor="middle">All listed control routes use this prefix.</text>
+<rect x="932" y="254" width="536" height="96" rx="14" fill="#eff6ff" stroke="none" stroke-width="2"/>
+<circle cx="968" cy="299" r="23" fill="#0f172a"/>
+<text x="968" y="307" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="700" text-anchor="middle">1</text>
+<use href="#icon-monitor" transform="translate(1001 287) scale(0.65)" color="#0f172a" aria-hidden="true"/>
+<text x="1040" y="283" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" fill="#0f172a" font-weight="700" text-anchor="start">HTTPS request</text>
+<text x="1040" y="308" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Authorization: Bearer &lt;token&gt;</text>
+<path d="M1199 353v9m-6-5 6 6 6-6" fill="none" stroke="#2563eb" stroke-width="3"/>
+<rect x="932" y="366" width="536" height="96" rx="14" fill="#f5f3ff" stroke="none" stroke-width="2"/>
+<circle cx="968" cy="411" r="23" fill="#0f172a"/>
+<text x="968" y="419" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="700" text-anchor="middle">2</text>
+<use href="#icon-document" transform="translate(1001 399) scale(0.65)" color="#0f172a" aria-hidden="true"/>
+<text x="1040" y="395" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" fill="#0f172a" font-weight="700" text-anchor="start">Authenticate</text>
+<text x="1040" y="420" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Resolve the service-account identity.</text>
+<path d="M1199 465v9m-6-5 6 6 6-6" fill="none" stroke="#2563eb" stroke-width="3"/>
+<rect x="932" y="478" width="536" height="96" rx="14" fill="#eff6ff" stroke="none" stroke-width="2"/>
+<circle cx="968" cy="523" r="23" fill="#0f172a"/>
+<text x="968" y="531" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="700" text-anchor="middle">3</text>
+<use href="#icon-shield" transform="translate(1001 511) scale(0.65)" color="#0f172a" aria-hidden="true"/>
+<text x="1040" y="507" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" fill="#0f172a" font-weight="700" text-anchor="start">Authorize the operation</text>
+<text x="1040" y="532" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Check the required role capability.</text>
+<path d="M1199 577v9m-6-5 6 6 6-6" fill="none" stroke="#2563eb" stroke-width="3"/>
+<rect x="932" y="590" width="536" height="96" rx="14" fill="#f5f3ff" stroke="none" stroke-width="2"/>
+<circle cx="968" cy="635" r="23" fill="#0f172a"/>
+<text x="968" y="643" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="700" text-anchor="middle">4</text>
+<use href="#icon-accounts" transform="translate(1001 623) scale(0.65)" color="#0f172a" aria-hidden="true"/>
+<text x="1040" y="619" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" fill="#0f172a" font-weight="700" text-anchor="start">Check agent scope</text>
+<text x="1040" y="644" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Verify single-agent targets exist.</text>
+<text x="1040" y="667" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Derive broadcast targets from scope.</text>
+<path d="M1199 689v9m-6-5 6 6 6-6" fill="none" stroke="#2563eb" stroke-width="3"/>
+<rect x="932" y="702" width="536" height="96" rx="14" fill="#eff6ff" stroke="none" stroke-width="2"/>
+<circle cx="968" cy="747" r="23" fill="#0f172a"/>
+<text x="968" y="755" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="700" text-anchor="middle">5</text>
+<use href="#icon-gear" transform="translate(1001 735) scale(0.65)" color="#0f172a" aria-hidden="true"/>
+<text x="1040" y="731" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" fill="#0f172a" font-weight="700" text-anchor="start">Validate and dispatch</text>
+<text x="1040" y="756" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Save desired content or queue actions.</text>
+<path d="M1199 801v9m-6-5 6 6 6-6" fill="none" stroke="#2563eb" stroke-width="3"/>
+<rect x="932" y="814" width="536" height="96" rx="14" fill="#f5f3ff" stroke="none" stroke-width="2"/>
+<circle cx="968" cy="859" r="23" fill="#0f172a"/>
+<text x="968" y="867" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="700" text-anchor="middle">6</text>
+<use href="#icon-dispatch" transform="translate(1001 847) scale(0.65)" color="#0f172a" aria-hidden="true"/>
+<text x="1040" y="843" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" fill="#0f172a" font-weight="700" text-anchor="start">Deliver to displays</text>
+<text x="1040" y="868" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Transient actions need online agents.</text>
+<text x="1040" y="891" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Saved content can wait for reconnect.</text>
+<path d="M1199 913v9m-6-5 6 6 6-6" fill="none" stroke="#2563eb" stroke-width="3"/>
+<rect x="932" y="926" width="536" height="96" rx="14" fill="#eff6ff" stroke="none" stroke-width="2"/>
+<circle cx="968" cy="971" r="23" fill="#0f172a"/>
+<text x="968" y="979" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="700" text-anchor="middle">7</text>
+<use href="#icon-document" transform="translate(1001 959) scale(0.65)" color="#0f172a" aria-hidden="true"/>
+<text x="1040" y="955" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" fill="#0f172a" font-weight="700" text-anchor="start">Accepted asynchronous work</text>
+<text x="1040" y="980" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">202 + event_id</text>
+<text x="1040" y="1003" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Acceptance does not confirm execution.</text>
+<path d="M1199 1025v9m-6-5 6 6 6-6" fill="none" stroke="#2563eb" stroke-width="3"/>
+<rect x="932" y="1038" width="536" height="96" rx="14" fill="#f5f3ff" stroke="none" stroke-width="2"/>
+<circle cx="968" cy="1083" r="23" fill="#0f172a"/>
+<text x="968" y="1091" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="700" text-anchor="middle">8</text>
+<use href="#icon-results" transform="translate(1001 1071) scale(0.65)" color="#0f172a" aria-hidden="true"/>
+<text x="1040" y="1067" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" fill="#0f172a" font-weight="700" text-anchor="start">Retrieve outcomes</text>
+<text x="1040" y="1092" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">GET /events/{eventId}</text>
+<text x="1040" y="1115" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Check delivery state and agent receipts.</text>
+<rect x="932" y="1174" width="536" height="122" rx="14" fill="#f1f5f9" stroke="none" stroke-width="2"/>
+<text x="952" y="1206" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" fill="#475569" font-weight="700" text-anchor="start">PUBLIC PROCESS LIVENESS</text>
+<g data-method="GET" data-path="/healthz">
+<text x="952" y="1240" font-family="DejaVu Sans Mono, monospace" font-size="22" fill="#0f172a" font-weight="600" text-anchor="start">GET /healthz</text>
+</g>
+<text x="952" y="1275" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">No bearer token; separate from readiness.</text>
+<rect x="932" y="1314" width="536" height="146" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="952" y="1348" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" fill="#475569" font-weight="700" text-anchor="start">SCOPE AND ROLES</text>
+<text x="952" y="1380" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Method colors identify the required capability.</text>
+<text x="952" y="1410" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Administrator grants every capability and scope.</text>
+<text x="952" y="1440" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Events require access to all their target agents.</text>
+<rect x="1496" y="1210" width="880" height="250" rx="14" fill="#eff6ff" stroke="none" stroke-width="2"/>
+<use href="#icon-document" transform="translate(1516 1221) scale(0.7)" color="#2563eb" aria-hidden="true"/>
+<text x="1558" y="1244" font-family="DejaVu Sans, Arial, sans-serif" font-size="23" fill="#2563eb" font-weight="700" text-anchor="start">DELIVERY AND RESULTS</text>
+<text x="1516" y="1278" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Playlist updates persist while agents are offline; only the latest content is applied.</text>
+<text x="1516" y="1308" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Banners, borders, audio, hardware and host actions require an online agent.</text>
+<text x="1516" y="1338" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Broadcasts report results per target; failures can differ between displays.</text>
+<text x="1516" y="1368" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">A 202 response accepts work. Poll the event to inspect delivery and execution.</text>
+<text x="1516" y="1398" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" fill="#0f172a" font-weight="400" text-anchor="start">Uncertain delivery may have executed; it is never automatically retried.</text>
+<rect x="24" y="1482" width="2352" height="48" rx="14" fill="#eff6ff" stroke="none" stroke-width="2"/>
+<circle cx="66" cy="1506" r="12" fill="#2563eb"/>
+<text x="90" y="1512" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" fill="#0f172a" font-weight="400" text-anchor="start">read / view</text>
+<circle cx="458" cy="1506" r="12" fill="#15803d"/>
+<text x="482" y="1512" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" fill="#0f172a" font-weight="400" text-anchor="start">content_manager</text>
+<circle cx="850" cy="1506" r="12" fill="#c2410c"/>
+<text x="874" y="1512" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" fill="#0f172a" font-weight="400" text-anchor="start">cec_manager</text>
+<circle cx="1242" cy="1506" r="12" fill="#7c3aed"/>
+<text x="1266" y="1512" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" fill="#0f172a" font-weight="400" text-anchor="start">alert_operator</text>
+<circle cx="1634" cy="1506" r="12" fill="#be123c"/>
+<text x="1658" y="1512" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" fill="#0f172a" font-weight="400" text-anchor="start">system_operator</text>
+<circle cx="2026" cy="1506" r="12" fill="#64748b"/>
+<text x="2050" y="1512" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" fill="#0f172a" font-weight="400" text-anchor="start">administrator</text>
 </svg>
