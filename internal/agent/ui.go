@@ -72,6 +72,13 @@ type uiBannerRequest struct {
 	DurationSeconds int    `json:"duration_seconds"`
 }
 
+// uiBorderRequest supplies one validated transient screen border to the local UI.
+type uiBorderRequest struct {
+	Command         string `json:"cmd"`
+	Severity        string `json:"severity"`
+	DurationSeconds int    `json:"duration_seconds"`
+}
+
 // uiStatusRequest supplies the local connectivity status rendered by the UI.
 type uiStatusRequest struct {
 	Command      string `json:"cmd"`

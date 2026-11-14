@@ -24,6 +24,8 @@ static int proxy_auth_calls;
 static int status_calls;
 static int banner_calls;
 static guint banner_duration;
+static int border_calls;
+static guint border_duration;
 static int default_calls;
 static int playlist_calls;
 static int playback_calls;
@@ -110,6 +112,15 @@ void webview_show_banner(const char* message, const char* severity, guint durati
     last_value = g_strdup_printf("%s:%s", severity, message);
 }
 
+/* webview_show_border records validated screen-border dispatches. */
+void webview_show_border(const char* severity, guint duration_seconds)
+{
+    border_calls++;
+    border_duration = duration_seconds;
+    g_free(last_value);
+    last_value = g_strdup(severity);
+}
+
 /* webview_restore_default counts default-page dispatches. */
 void webview_restore_default(void) { default_calls++; }
 
@@ -192,7 +203,16 @@ static void test_malformed_messages(void)
         "{\"cmd\":\"banner\",\"message\":\"hello\",\"severity\":\"error\",\"duration_seconds\":10}",
         "{\"cmd\":\"banner\",\"message\":\"hello\",\"severity\":\"info\",\"duration_seconds\":301}",
         "{\"cmd\":\"banner\",\"message\":\"hello\",\"severity\":\"info\"}",
-        "{\"cmd\":\"reload\",\"extra\":true}",
+        "{\"cmd\":\"reload\",\"extra\":true}", "{\"cmd\":\"border\"}",
+        "{\"cmd\":\"border\",\"severity\":\"\",\"duration_seconds\":0}",
+        "{\"cmd\":\"border\",\"severity\":\"warning\",\"duration_seconds\":0}",
+        "{\"cmd\":\"border\",\"severity\":\"\",\"duration_seconds\":1}",
+        "{\"cmd\":\"border\",\"severity\":\"error\",\"duration_seconds\":10}",
+        "{\"cmd\":\"border\",\"severity\":\"info\",\"duration_seconds\":301}",
+        "{\"cmd\":\"border\",\"severity\":\"info\",\"duration_seconds\":-1}",
+        "{\"cmd\":\"border\",\"severity\":\"info\",\"duration_seconds\":1.5}",
+        "{\"cmd\":\"border\",\"severity\":false,\"duration_seconds\":10}",
+        "{\"cmd\":\"border\",\"severity\":\"info\",\"duration_seconds\":10,\"color\":\"red\"}",
         "{\"cmd\":\"playback\",\"start_at\":100,\"extra\":true}",
         "{\"cmd\":\"playback\",\"start_at\":4102444801}", "{\"cmd\":\"playback\",\"interval\":30}",
         "{\"cmd\":\"proxy_config\",\"enabled\":true,\"url\":\"http://127.0.0.1:3129\"}",
@@ -219,6 +239,11 @@ static void test_malformed_messages(void)
 /* test_valid_messages dispatches each supported command to the expected stub. */
 static void test_valid_messages(void)
 {
+    g_assert_true(process("{\"cmd\":\"border\",\"severity\":\"warning\",\"duration_seconds\":30}"));
+    drain_main_context();
+    g_assert_cmpint(border_calls, ==, 1);
+    g_assert_cmpuint(border_duration, ==, 30);
+    g_assert_cmpstr(last_value, ==, "warning");
     const char* token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     g_assert_true(process("{\"cmd\":\"proxy_config\",\"url\":\"http://127.0.0.1:3129\"}"));
     drain_main_context();
@@ -354,12 +379,13 @@ static const char* update_messages[] = {
     ("{\"cmd\":\"proxy_auth\",\"agent_id\":\"display-01\",\"token\":"
      "\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}"),
     "{\"cmd\":\"status\",\"message\":\"Updated\"}",
-    "{\"cmd\":\"banner\",\"message\":\"Updated\",\"severity\":\"info\",\"duration_seconds\":1}"
+    "{\"cmd\":\"banner\",\"message\":\"Updated\",\"severity\":\"info\",\"duration_seconds\":1}",
+    "{\"cmd\":\"border\",\"severity\":\"critical\",\"duration_seconds\":1}"
 };
 
 static int update_calls(void)
 {
-    return proxy_config_calls + proxy_auth_calls + status_calls + banner_calls;
+    return proxy_config_calls + proxy_auth_calls + status_calls + banner_calls + border_calls;
 }
 
 /* wait_for_queued_update observes admission without running the GTK callback. */

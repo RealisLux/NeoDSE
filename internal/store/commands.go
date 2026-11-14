@@ -301,7 +301,7 @@ func validateReceipt(eventID string, receipt Receipt) error {
 		return errorsInvalid("receipt status is invalid")
 	}
 	switch instruction.CommandType(receipt.Operation) {
-	case "desired_state", instruction.CommandDisplay, instruction.CommandDisplayVolume, instruction.CommandSound, instruction.CommandSerial, instruction.CommandBanner,
+	case "desired_state", instruction.CommandDisplay, instruction.CommandDisplayVolume, instruction.CommandSound, instruction.CommandSerial, instruction.CommandBanner, instruction.CommandBorder,
 		instruction.CommandReload, instruction.CommandRestart, instruction.CommandReboot, instruction.CommandShutdown:
 		return nil
 	default:

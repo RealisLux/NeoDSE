@@ -166,6 +166,35 @@ func TestCommandJSONCodec(t *testing.T) {
 	}
 }
 
+// TestBorderCommandBounds verifies banner-equivalent bounds and strict wire decoding.
+func TestBorderCommandBounds(t *testing.T) {
+	for _, input := range []string{
+		`{"type":"border","payload":{"severity":"info","duration_seconds":1}}`,
+		`{"type":"border","payload":{"severity":"critical","duration_seconds":300}}`,
+	} {
+		var command Command
+		if err := json.Unmarshal([]byte(input), &command); err != nil {
+			t.Fatalf("valid border rejected: %s: %v", input, err)
+		}
+	}
+	for _, payload := range []string{
+		`{}`,
+		`{"severity":"","duration_seconds":0}`,
+		`{"severity":"warning","duration_seconds":0}`,
+		`{"severity":"","duration_seconds":10}`,
+		`{"severity":"error","duration_seconds":10}`,
+		`{"severity":"info","duration_seconds":-1}`,
+		`{"severity":"info","duration_seconds":301}`,
+		`{"severity":"info","duration_seconds":1.5}`,
+		`{"severity":"info","duration_seconds":10,"color":"red"}`,
+	} {
+		var command Command
+		if err := json.Unmarshal([]byte(`{"type":"border","payload":`+payload+`}`), &command); err == nil {
+			t.Fatalf("invalid border accepted: %s", payload)
+		}
+	}
+}
+
 // TestCommandCodecCoversEveryCommandType verifies that each permitted command
 // retains its concrete payload through the strict wire boundary.
 func TestCommandCodecCoversEveryCommandType(t *testing.T) {
@@ -175,6 +204,7 @@ func TestCommandCodecCoversEveryCommandType(t *testing.T) {
 		NewCommand(SoundCommand{Profile: "info"}),
 		NewCommand(SerialCommand{Command: SerialStatus}),
 		NewCommand(BannerCommand{Message: "notice", Severity: BannerInfo, DurationSeconds: 1}),
+		NewCommand(BorderCommand{Severity: BannerWarning, DurationSeconds: 30}),
 		NewCommand(ReloadCommand{}),
 		NewCommand(RestartCommand{}),
 		NewCommand(RebootCommand{}),

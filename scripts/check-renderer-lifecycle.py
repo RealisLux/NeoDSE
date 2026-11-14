@@ -446,6 +446,8 @@ def check_renderer(binary, env, ipc_path, output):
                 {"cmd": "proxy_auth", "agent_id": "display-test", "token": "ab" * 32},
                 {"cmd": "banner", "message": "IPC smoke test", "severity": "info",
                  "duration_seconds": 1},
+                {"cmd": "border", "severity": "warning", "duration_seconds": 1},
+                {"cmd": "border", "severity": "critical", "duration_seconds": 30},
             ):
                 response = request(ipc_path, json.dumps(command).encode() + b"\n")
                 assert response["status"] == "accepted", response

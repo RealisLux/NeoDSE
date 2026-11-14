@@ -16,7 +16,57 @@ import (
 	"time"
 
 	"github.com/RealisLux/NeoDSE/internal/config"
+	"github.com/RealisLux/NeoDSE/internal/instruction"
 )
+
+// TestBorderCommandRequiresRendererAcknowledgement verifies border requests cross
+// the Unix boundary and renderer rejections are surfaced to the controller.
+func TestBorderCommandRequiresRendererAcknowledgement(t *testing.T) {
+	for _, payload := range []instruction.BorderCommand{{Severity: "info", DurationSeconds: 1}, {Severity: "warning", DurationSeconds: 30}, {Severity: "critical", DurationSeconds: 300}} {
+		for _, status := range []string{"accepted", "rejected"} {
+			agent := &Agent{}
+			agent.config.Agent.UISocket = filepath.Join(t.TempDir(), "ui.sock")
+			listener, err := net.Listen("unix", agent.config.Agent.UISocket)
+			if err != nil {
+				t.Fatal(err)
+			}
+			requests := make(chan uiBorderRequest, 1)
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				peer, err := listener.Accept()
+				if err != nil {
+					return
+				}
+				defer peer.Close()
+				_ = peer.SetDeadline(time.Now().Add(3 * time.Second))
+				var request uiBorderRequest
+				if err := json.NewDecoder(peer).Decode(&request); err != nil {
+					t.Error(err)
+					return
+				}
+				requests <- request
+				if err := json.NewEncoder(peer).Encode(uiResponse{Status: status}); err != nil {
+					t.Error(err)
+				}
+			}()
+			_, err = agent.executeCommand(instruction.NewCommand(payload))
+			_ = listener.Close()
+			<-done
+			if (err == nil) != (status == "accepted") {
+				t.Fatalf("renderer status=%s: execution error=%v", status, err)
+			}
+			select {
+			case request := <-requests:
+				if request.Command != "border" || request.Severity != string(payload.Severity) || request.DurationSeconds != payload.DurationSeconds {
+					t.Fatalf("renderer request=%#v want=%#v", request, payload)
+				}
+			default:
+				t.Fatal("renderer did not receive border request")
+			}
+		}
+	}
+}
 
 // TestUIRequestCancellation interrupts an unresponsive renderer during shutdown.
 func TestUIRequestCancellation(t *testing.T) {

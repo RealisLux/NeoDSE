@@ -48,6 +48,9 @@ void webview_set_default_status(const char* agent_name, const char* friendly_nam
 /* Shows a transient overlay; the caller must run on the GTK main thread. */
 void webview_show_banner(const char* message, const char* severity, guint duration_seconds);
 
+/* Shows a transient screen border on the GTK thread, following banner visibility. */
+void webview_show_border(const char* severity, guint duration_seconds);
+
 /* Restores the built-in page; the caller must run on the GTK main thread. */
 void webview_restore_default(void);
 

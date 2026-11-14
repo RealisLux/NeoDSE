@@ -89,6 +89,9 @@ func (s *Server) registerAgentContentRoutes(mux *http.ServeMux) {
 	s.registerAPIPath(mux, "/api/v1/agents/{agentId}/banner", map[string]apiRoute{
 		http.MethodPost: {capability: capAlert, agentScoped: true, handler: s.bannerRoute},
 	})
+	s.registerAPIPath(mux, "/api/v1/agents/{agentId}/border", map[string]apiRoute{
+		http.MethodPost: {capability: capAlert, agentScoped: true, handler: s.borderRoute},
+	})
 }
 
 // registerBroadcastRoutes installs operations whose target set is derived from account scope.
@@ -117,6 +120,9 @@ func (s *Server) registerBroadcastRoutes(mux *http.ServeMux) {
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/broadcast/banner", map[string]apiRoute{
 		http.MethodPost: {capability: capAlert, broadcast: true, handler: s.broadcastBannerRoute},
+	})
+	s.registerAPIPath(mux, "/api/v1/agents/broadcast/border", map[string]apiRoute{
+		http.MethodPost: {capability: capAlert, broadcast: true, handler: s.broadcastBorderRoute},
 	})
 	s.registerAPIPath(mux, "/api/v1/agents/broadcast/{operation}", map[string]apiRoute{
 		http.MethodPost: {capability: capSystem, broadcast: true, handler: s.broadcastSystemRoute},

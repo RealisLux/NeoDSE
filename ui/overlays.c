@@ -19,7 +19,7 @@ static void configure_overlays(void)
     state->clock_scale = neodse_env_scale("NEODSE_CLOCK_SCALE", state->clock_scale);
     /* The display name is shown by default when one is configured. */
     state->show_friendly_name = neodse_env_visibility("NEODSE_UI_FRIENDLY_NAME", TRUE);
-    /* Banners, display name and clock are hidden on the waiting screen by default. */
+    /* Banners, borders, display name and clock are hidden on the waiting screen by default. */
     state->show_overlays_on_waiting = neodse_env_visibility("NEODSE_UI_WAITING_OVERLAYS", FALSE);
 }
 
@@ -86,6 +86,7 @@ static void set_banner_visibility(gboolean visible)
 /* update_overlays refreshes the status N and custom-message overlay visibility. */
 void update_overlays(void)
 {
+    update_border();
     if (renderer_state()->notification_banner == NULL || renderer_state()->banner_label == NULL)
     {
         return;
@@ -273,6 +274,7 @@ void create_overlays(GtkOverlay* overlay)
 /* destroy_overlays releases timers and cached custom messages before window teardown. */
 void destroy_overlays(void)
 {
+    destroy_border();
     if (renderer_state()->clock_timer != 0)
     {
         g_source_remove(renderer_state()->clock_timer);

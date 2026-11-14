@@ -28,6 +28,7 @@ func TestCommittedBroadcastFinishesAfterRequestCancellation(t *testing.T) {
 	}{
 		{"playlist", http.MethodPut, "/api/v1/agents/broadcast/playlist", `{"urls":["https://display.example/page"]}`, "desired_state"},
 		{"banner", http.MethodPost, "/api/v1/agents/broadcast/banner", `{"message":"Maintenance","severity":"info","duration_seconds":30}`, "command"},
+		{"border", http.MethodPost, "/api/v1/agents/broadcast/border", `{"severity":"warning","duration_seconds":30}`, "command"},
 	} {
 		t.Run(operation.name, func(t *testing.T) {
 			s := testServerWithAgents(t, Config{}, map[string]string{"display-a": "", "display-b": ""})

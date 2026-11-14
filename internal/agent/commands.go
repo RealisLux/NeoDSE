@@ -299,6 +299,10 @@ func (a *Agent) executeCommand(command instruction.Command) (commandResult, erro
 		})
 	case instruction.ReloadCommand:
 		return commandResult{}, a.sendUICommand(uiReloadRequest{Command: "reload"})
+	case instruction.BorderCommand:
+		return commandResult{}, a.sendUICommand(uiBorderRequest{
+			Command: "border", Severity: string(payload.Severity), DurationSeconds: payload.DurationSeconds,
+		})
 	case instruction.RestartCommand:
 		restartUI := a.restartUI
 		if restartUI == nil {

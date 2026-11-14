@@ -24,6 +24,7 @@ const (
 	CommandSound         CommandType = "sound"
 	CommandSerial        CommandType = "serial"
 	CommandBanner        CommandType = "banner"
+	CommandBorder        CommandType = "border"
 	CommandReload        CommandType = "reload"
 	CommandRestart       CommandType = "restart"
 	CommandReboot        CommandType = "reboot"
@@ -43,7 +44,7 @@ func (command DisplayCommand) Validate() error {
 	return nil
 }
 
-// BannerSeverity controls the visual urgency of one transient banner.
+// BannerSeverity controls the visual urgency of banners and screen borders.
 type BannerSeverity string
 
 const (
@@ -205,6 +206,21 @@ func (command BannerCommand) Validate() error {
 	return nil
 }
 
+// BorderCommand highlights a screen using the renderer's banner severity palette.
+// Like a banner, it lasts for 1-300 seconds and a new request replaces it.
+type BorderCommand struct {
+	Severity        BannerSeverity `json:"severity"`
+	DurationSeconds int            `json:"duration_seconds"`
+}
+
+// Validate verifies one transient screen border.
+func (command BorderCommand) Validate() error {
+	if !command.Severity.Valid() || command.DurationSeconds < 1 || command.DurationSeconds > 300 {
+		return errors.New("border requires a valid severity and duration of 1-300 seconds")
+	}
+	return nil
+}
+
 // ReloadCommand reloads active playlist documents in their existing WebKit views.
 type ReloadCommand struct{}
 
@@ -231,7 +247,7 @@ func (ShutdownCommand) Validate() error { return nil }
 
 // commandPayload is the closed set of payloads accepted by NewCommand.
 type commandPayload interface {
-	DisplayCommand | DisplayVolumeCommand | SoundCommand | SerialCommand | BannerCommand |
+	DisplayCommand | DisplayVolumeCommand | SoundCommand | SerialCommand | BannerCommand | BorderCommand |
 		ReloadCommand | RestartCommand | RebootCommand | ShutdownCommand
 	validator
 }
@@ -269,6 +285,8 @@ func (command Command) Type() CommandType {
 		return CommandSerial
 	case BannerCommand:
 		return CommandBanner
+	case BorderCommand:
+		return CommandBorder
 	case ReloadCommand:
 		return CommandReload
 	case RestartCommand:
@@ -338,6 +356,8 @@ func decodeCommandPayload(commandType CommandType, data []byte) (Command, error)
 		return decodeTypedCommand[SerialCommand](data)
 	case CommandBanner:
 		return decodeTypedCommand[BannerCommand](data)
+	case CommandBorder:
+		return decodeTypedCommand[BorderCommand](data)
 	case CommandReload:
 		return decodeTypedCommand[ReloadCommand](data)
 	case CommandRestart:

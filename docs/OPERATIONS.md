@@ -200,6 +200,33 @@ visibility and size, and waiting-screen status messages, are controlled by the
 same three severity names, with files selected in the
 [agent configuration](CONFIGURATION.md#agent).
 
+### Highlight a screen that needs attention
+
+Use `alert_operator` to show a border with the same `info` (blue), `warning`
+(orange) or `critical` (red) palette as banners:
+
+```bash
+neodse_api --request POST -H 'Content-Type: application/json' \
+  --data '{"severity":"critical","duration_seconds":60}' \
+  https://127.0.0.1:8443/api/v1/agents/display-001/border
+```
+
+Like a banner, the border lasts 1–300 seconds and expires automatically. A new request
+replaces its color and restarts its timer. It surrounds the full viewport without
+resizing the page or intercepting input, stays visible across playlist changes,
+and follows the banner's waiting-screen setting: it is hidden unless
+`NEODSE_UI_WAITING_OVERLAYS=show`. Its timer continues while hidden.
+A UI restart clears it. Set `NEODSE_BORDER_WIDTH` in `display.env` to adjust its
+width. Set `NEODSE_BORDER_FLASH=on` to alternate 500 ms visible and 500 ms hidden;
+the default is a steady border (`off`). Each new request starts visible and
+restarts the expiry timer. Flashing stops when the request expires; both timers
+continue while the waiting-screen setting hides the border. Restart the UI after
+editing `display.env`.
+
+Use `POST /api/v1/agents/broadcast/border` with the same payload to target
+all agents in the account's scope. These are transient commands requiring online
+agents; check the returned event for delivery results.
+
 ### Control screen power and a serial warning light
 
 Assign `cec_manager`, enable HDMI-CEC in the agent configuration and on the

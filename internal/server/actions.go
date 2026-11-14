@@ -116,6 +116,29 @@ func (s *Server) handleBanner(w http.ResponseWriter, r *http.Request, target str
 	s.dispatchCommand(w, r, target, broadcast, command)
 }
 
+// handleBorder validates and dispatches one transient screen border.
+func (s *Server) handleBorder(w http.ResponseWriter, r *http.Request, target string, broadcast bool) {
+	var payload instruction.BorderCommand
+	if !decodeJSONBody(w, r, &payload) {
+		return
+	}
+	if payload.Validate() != nil {
+		writeAPIError(w, http.StatusBadRequest, "invalid border")
+		return
+	}
+	s.dispatchCommand(w, r, target, broadcast, instruction.NewCommand(payload))
+}
+
+// borderRoute highlights one screen within the account's scope.
+func (s *Server) borderRoute(w http.ResponseWriter, r *http.Request) {
+	s.handleBorder(w, r, r.PathValue("agentId"), false)
+}
+
+// broadcastBorderRoute highlights all screens within the account's scope.
+func (s *Server) broadcastBorderRoute(w http.ResponseWriter, r *http.Request) {
+	s.handleBorder(w, r, "*", true)
+}
+
 // playlistRoute applies a playlist request to the agent identified by the route.
 func (s *Server) playlistRoute(w http.ResponseWriter, r *http.Request) {
 	s.handlePlaylist(w, r, r.PathValue("agentId"), false)
