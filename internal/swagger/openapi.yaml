@@ -16,7 +16,7 @@ info:
       The display receives only the latest content. When it applies that content, earlier
       unresolved publications for it become `expired` with reason
       `superseded by revision N`, and a publication of the same content becomes `accepted`.
-    - Banners, sounds, hardware and host actions require an online, authenticated agent.
+    - Banners, borders, sounds, hardware and host actions require an online, authenticated agent.
       A single offline target returns `409 agent_offline`; broadcasts record failures per target.
     - A `202` response means the request was accepted. Use its `event_id` with
       `GET /api/v1/events/{eventId}` to check results. An `uncertain` delivery may have
@@ -358,6 +358,25 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/BannerRequest' }
       responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid banner, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/AgentOffline' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
+  /api/v1/agents/{agentId}/border:
+    post:
+      tags: [Agent]
+      summary: Highlight a screen with a screen border
+      description: >-
+        Shows a native border for 1–300 seconds using the banner palette (info blue,
+        warning orange, critical red). Requires alert_operator and an online, authenticated
+        agent within the account's scope. A new border replaces the previous color and timer.
+        Like banners, the border is hidden on the waiting screen unless
+        NEODSE_UI_WAITING_OVERLAYS=show; its timer continues while hidden. Width is configured by NEODSE_BORDER_WIDTH.
+        It expires automatically and is cleared by a UI restart. Offline broadcast targets
+        are rejected in the event outcomes.
+      parameters: [ { $ref: '#/components/parameters/AgentID' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BorderRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid border, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/AgentOffline' }, '503': { $ref: '#/components/responses/ServiceUnavailable' } }
   /api/v1/agents/broadcast/{operation}:
     post:
       tags: [Agent broadcast]
@@ -486,6 +505,24 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/BannerRequest' }
       responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid banner, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /api/v1/agents/broadcast/border:
+    post:
+      tags: [Agent broadcast]
+      summary: Highlight all scoped screens with a screen border
+      description: >-
+        Shows a native border for 1–300 seconds using the banner palette (info blue,
+        warning orange, critical red). Requires alert_operator and an online, authenticated
+        agent within the account's scope. A new border replaces the previous color and timer.
+        Like banners, the border is hidden on the waiting screen unless
+        NEODSE_UI_WAITING_OVERLAYS=show; its timer continues while hidden. Width is configured by NEODSE_BORDER_WIDTH.
+        It expires automatically and is cleared by a UI restart. Offline broadcast targets
+        are rejected in the event outcomes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BorderRequest' }
+      responses: { '202': { $ref: '#/components/responses/QueuedEvent' }, '400': { description: Invalid border, content: { application/json: { schema: { $ref: '#/components/schemas/APIError' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
   /api/v1/events/{eventId}:
     get:
       tags: [Events]
@@ -732,7 +769,7 @@ components:
           minItems: 1
           maxItems: 6
           uniqueItems: true
-          description: viewer reads state and schedules; content_manager controls playlists, reload, synchronization and proxy revocation; alert_operator controls banners, notification sounds and serial; cec_manager controls HDMI-CEC power and audio; system_operator controls host lifecycle; administrator has all access and exclusively manages schedule changes and service accounts.
+          description: viewer reads state and schedules; content_manager controls playlists, reload, synchronization and proxy revocation; alert_operator controls banners, screen borders, notification sounds and serial; cec_manager controls HDMI-CEC power and audio; system_operator controls host lifecycle; administrator has all access and exclusively manages schedule changes and service accounts.
           items: { type: string, enum: [viewer, content_manager, alert_operator, cec_manager, system_operator, administrator] }
         all_agents: { type: boolean, default: false }
         agents:
@@ -898,6 +935,13 @@ components:
         message: { type: string, minLength: 1, maxLength: 256, description: Must contain 1-256 Unicode characters and must not be whitespace-only }
         severity: { type: string, enum: [info, warning, critical] }
         duration_seconds: { type: integer, minimum: 1, maximum: 300 }
+    BorderRequest:
+      type: object
+      additionalProperties: false
+      required: [severity, duration_seconds]
+      properties:
+        severity: { type: string, enum: [info, warning, critical] }
+        duration_seconds: { type: integer, minimum: 1, maximum: 300 }
     EventState:
       type: object
       properties:
@@ -928,7 +972,7 @@ components:
       properties:
         agent_id: { type: string }
         status: { type: string, enum: [received, accepted, completed, failed, expired, unsupported] }
-        operation: { type: string, enum: [desired_state, display, display_volume, sound, serial, banner, reload, restart, reboot, shutdown] }
+        operation: { type: string, enum: [desired_state, display, display_volume, sound, serial, banner, border, reload, restart, reboot, shutdown] }
         error: { type: string, maxLength: 1024 }
         details: { type: string, maxLength: 768, description: 'Bounded command diagnostics, including Linux CEC adapter details for CEC commands' }
         value: { type: string, maxLength: 32, description: Normalized command result; display power commands return the resulting power state }

@@ -30,6 +30,7 @@ typedef enum
     UPDATE_PROXY_AUTH,
     UPDATE_STATUS,
     UPDATE_BANNER,
+    UPDATE_BORDER,
     UPDATE_RELOAD,
     UPDATE_PLAYBACK
 } UpdateKind;
@@ -255,6 +256,9 @@ static void apply_message_now(Message* m)
         break;
     case UPDATE_BANNER:
         webview_show_banner(m->fields[0], m->fields[1], m->duration_seconds);
+        break;
+    case UPDATE_BORDER:
+        webview_show_border(m->fields[0], m->duration_seconds);
         break;
     case UPDATE_RELOAD:
         playlist_reload();
@@ -562,6 +566,33 @@ gboolean ipc_process_message(const char* msg, char** error_message, gboolean wai
         }
         const char* fields[] = { message, severity };
         gboolean applied = submit_update(UPDATE_BANNER, fields, G_N_ELEMENTS(fields),
+            (guint)duration, wait_for_application, error_message);
+        g_object_unref(parser);
+        return applied;
+    }
+
+    if (g_strcmp0(cmd, "border") == 0)
+    {
+        const char* const allowed[] = { "cmd", "severity", "duration_seconds" };
+        JsonNode* severity_node = json_object_get_member(obj, "severity");
+        JsonNode* duration_node = json_object_get_member(obj, "duration_seconds");
+        if (!object_has_only_members(obj, allowed, G_N_ELEMENTS(allowed))
+            || !node_is_string(severity_node) || !node_is_integer(duration_node))
+        {
+            g_object_unref(parser);
+            return FALSE;
+        }
+        const char* severity = json_node_get_string(severity_node);
+        gint64 duration = json_node_get_int(duration_node);
+        if ((g_strcmp0(severity, "info") != 0 && g_strcmp0(severity, "warning") != 0
+                && g_strcmp0(severity, "critical") != 0)
+            || duration < 1 || duration > 300)
+        {
+            g_object_unref(parser);
+            return FALSE;
+        }
+        const char* fields[] = { severity };
+        gboolean applied = submit_update(UPDATE_BORDER, fields, G_N_ELEMENTS(fields),
             (guint)duration, wait_for_application, error_message);
         g_object_unref(parser);
         return applied;

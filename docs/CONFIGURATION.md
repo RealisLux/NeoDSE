@@ -204,6 +204,7 @@ the defaults below.
 | `NEODSE_FRIENDLY_NAME_SCALE` | `1.0` | Top-left display-name scale |
 | `NEODSE_CLOCK_SCALE` | `1.0` | Top-right clock scale |
 | `NEODSE_BANNER_SCALE` | `1.0` | Notification-banner scale |
+| `NEODSE_BORDER_WIDTH` | `12` | Screen-border width in GTK logical pixels, integer `1`–`64`; invalid values use the default. Colors follow the banner palette: info blue, warning orange, critical red |
 | `NEODSE_UI_ZOOM` | `1.0` | WebKit content scale |
 | `NEODSE_UI_LOGO_ANIMATION` | `show` | Animated N; `hide` leaves the completed N visible |
 | `NEODSE_UI_STATUS_LOGO` | `show` | Static colored N indicating connection health during playlist playback |
@@ -211,7 +212,7 @@ the defaults below.
 | `NEODSE_UI_CLOCK` | `show` | Current device-local time in 24-hour `HH:MM:SS` format |
 | `NEODSE_UI_DEVICE_INFO` | `hide` | Agent name and LAN/VPN addresses on the waiting screen |
 | `NEODSE_UI_STATUS_MESSAGE` | `hide` | Latest status message below the waiting-screen logo |
-| `NEODSE_UI_WAITING_OVERLAYS` | `hide` | Allow banners, display name and clock on the waiting screen; individual visibility settings still apply. Playlist overlays are unaffected |
+| `NEODSE_UI_WAITING_OVERLAYS` | `hide` | Allow banners, screen borders, display name and clock on the waiting screen; individual visibility settings still apply. Playlist overlays are unaffected |
 
 The waiting screen is native GTK on a black background. Its logo indicates the
 latest severity: blue for information, green for success, amber for warning and

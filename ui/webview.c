@@ -286,6 +286,7 @@ static void webview_create(void)
     create_overlays(GTK_OVERLAY(overlay));
     renderer_state()->status_logo = create_status_logo();
     gtk_overlay_add_overlay(GTK_OVERLAY(overlay), renderer_state()->status_logo);
+    create_border(GTK_OVERLAY(overlay));
     create_waiting_screen();
     gtk_stack_add_named(
         GTK_STACK(renderer_state()->stack), renderer_state()->waiting_view, "default");
