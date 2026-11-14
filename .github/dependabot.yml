@@ -8,3 +8,10 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    # CodeQL init/analyze and their post actions must use the same version.
+    groups:
+      codeql:
+        patterns: ['github/codeql-action*']
+      codeql-security:
+        applies-to: security-updates
+        patterns: ['github/codeql-action*']
